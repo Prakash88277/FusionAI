@@ -31,16 +31,23 @@ async def upload_and_recommend_jobs(
     """
     Upload resume and get job recommendations in one call
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     # Check file extension
     if not file.filename.endswith(('.pdf', '.docx')):
         raise HTTPException(status_code=400, detail="Only PDF and DOCX files are supported")
     
     try:
+        logger.info(f"Starting resume upload and recommendation for file: {file.filename}")
+        
         # Determine job sources
         if job_sources.lower() == "all":
             sources_to_scrape = None
         else:
             sources_to_scrape = [s.strip() for s in job_sources.split(',')]
+        
+        logger.info(f"Job sources: {sources_to_scrape}, Limit: {limit}")
         
         # Process resume and get recommendations
         result = await simple_job_recommendation_service.process_resume_and_get_recommendations(
@@ -49,7 +56,9 @@ async def upload_and_recommend_jobs(
             limit=limit
         )
         
+        logger.info(f"Successfully processed resume. Found {len(result.get('job_recommendations', []))} jobs")
         return result
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing resume and getting recommendations: {str(e)}")
+        logger.error(f"Error in upload_and_recommend_jobs: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error processing resume: {str(e)}")

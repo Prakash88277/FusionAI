@@ -53,7 +53,15 @@ class SimpleJobRecommendationService:
                 jobs = await simple_job_aggregator.scrape_specific_sources(job_sources, search_params)
             else:
                 jobs = await simple_job_aggregator.scrape_all_jobs(search_params)
-            
+
+            # Fallback to mock jobs if live scraping returns nothing
+            if not jobs:
+                self.logger.warning("No jobs from live scrapers; falling back to mock job service")
+                jobs = await simple_job_aggregator.scrape_specific_sources(
+                    simple_job_aggregator.get_available_sources(),
+                    search_params
+                )
+
             self.logger.info(f"Scraped {len(jobs)} jobs")
             
             # Step 3: Match jobs with resume

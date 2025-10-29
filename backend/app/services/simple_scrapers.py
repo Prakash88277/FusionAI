@@ -41,6 +41,7 @@ class SimpleJobScraper:
             location=location,
             description=description,
             skills=skills or [],
+            skills_required=(skills or []),
             apply_link=apply_link,
             source=self.source_name,
             posted_date=datetime.now(),

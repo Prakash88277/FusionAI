@@ -1,142 +1,159 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { uploadResume, uploadResumeAndRecommend } from '../services/api';
+// src/components/ResumeUpload.js
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { AiOutlineUpload } from "react-icons/ai";
+import { useNavigate } from "react-router-dom";
+import { uploadResumeAndRecommend } from "../services/api";
 
-const ResumeUpload = ({ onUploadSuccess, useCompleteWorkflow = false }) => {
-  const [file, setFile] = useState(null);
+const ResumeUpload = ({ onUpload }) => {
+  const [fileName, setFileName] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      if (selectedFile.type === 'application/pdf' || 
-          selectedFile.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        setFile(selectedFile);
-        setError('');
-      } else {
-        setFile(null);
-        setError('Please upload a PDF or DOCX file');
-      }
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!file) {
-      setError('Please select a file to upload');
-      return;
-    }
-
-    setUploading(true);
-    setError('');
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
     
+    setFileName(file.name);
+    setError("");
+    setUploading(true);
+
     try {
-      console.log('Starting upload process...');
-      console.log('File selected:', file.name, 'Size:', file.size);
-      
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
       
-      let response;
-      if (useCompleteWorkflow) {
-        console.log('Using complete workflow...');
-        // Use complete workflow: parse resume + scrape jobs + match
-        response = await uploadResumeAndRecommend(formData, "all", 20);
-        
-        // Store resume data
-        if (response.data.resume_data) {
-          localStorage.setItem('resumeId', response.data.resume_data.id || '');
-          if (response.data.resume_data.country) {
-            localStorage.setItem('resumeCountry', response.data.resume_data.country);
-          }
-        }
-        
-        // Store job recommendations
-        if (response.data.job_recommendations) {
-          localStorage.setItem('jobRecommendations', JSON.stringify(response.data.job_recommendations));
-        }
-      } else {
-        console.log('Using simple upload...');
-        // Use simple upload
-        response = await uploadResume(formData);
-        localStorage.setItem('resumeId', response.data.id || '');
-        if (response.data.country) {
-          localStorage.setItem('resumeCountry', response.data.country);
+      // Upload and get recommendations (fetching 50 jobs for more options)
+      const response = await uploadResumeAndRecommend(formData, "all", 50);
+      
+      // Store resume data
+      if (response.data.resume_data) {
+        localStorage.setItem("resumeId", response.data.resume_data.id || "");
+        if (response.data.resume_data.country) {
+          localStorage.setItem("resumeCountry", response.data.resume_data.country);
         }
       }
       
-      console.log('Upload successful!', response.data);
-      setUploading(false);
-      
-      // Call success callback if provided
-      if (onUploadSuccess) {
-        onUploadSuccess();
-      } else {
-        navigate('/dashboard');
+      // Store job recommendations
+      if (response.data.job_recommendations) {
+        localStorage.setItem("jobRecommendations", JSON.stringify(response.data.job_recommendations));
       }
+      
+      // Mark upload as successful
+      localStorage.setItem("resumeUploaded", "true");
+      
+      // Call parent callback if provided
+      if (onUpload) onUpload(file);
+      
+      // Redirect to dashboard
+      navigate("/dashboard");
       
     } catch (err) {
+      console.error("Upload error:", err);
       setUploading(false);
-      console.error('Upload error:', err);
       
-      // Better error handling
-      let errorMessage = 'Failed to upload and parse resume';
-      
-      if (err.code === 'ERR_NETWORK' || err.code === 'ECONNREFUSED') {
-        errorMessage = 'Server not reachable. Please start backend before uploading.';
-      } else if (err.message && err.message.includes('Server not reachable')) {
-        errorMessage = err.message;
+      let errorMessage = "Failed to upload resume. ";
+      if (err.code === "ERR_NETWORK") {
+        errorMessage += "Please make sure the backend server is running.";
       } else if (err.response?.data?.detail) {
-        errorMessage = err.response.data.detail;
-      } else if (err.message) {
-        errorMessage = err.message;
+        errorMessage += err.response.data.detail;
+      } else {
+        errorMessage += "Please try again.";
       }
-      
       setError(errorMessage);
     }
   };
 
   return (
-    <div className="card">
-      <h2>Upload Your Resume</h2>
-      <p>Upload your resume to find matching jobs</p>
-      
-      <form onSubmit={handleSubmit}>
-        <div className="resume-upload" onClick={() => document.getElementById('resume-file').click()}>
+    <motion.div
+      className="flex flex-col items-center justify-center py-20 px-4 bg-gradient-to-b from-white via-blue-50 to-blue-100 min-h-[70vh]"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.8 }}
+    >
+      <motion.div
+        whileHover={{ scale: 1.03 }}
+        transition={{ type: "spring", stiffness: 200 }}
+        className="resume-upload border-2 border-dashed border-blue-400 rounded-2xl p-10 text-center shadow-xl bg-white/70 backdrop-blur-lg max-w-lg w-full"
+      >
+        <motion.div
+          animate={{ y: [0, -8, 0] }}
+          transition={{ repeat: Infinity, duration: 2.5 }}
+          className="flex flex-col items-center gap-3"
+        >
+          <AiOutlineUpload className="text-5xl text-blue-600" />
+          <h2 className="text-2xl font-semibold text-gray-800">
+            Upload Your Resume
+          </h2>
+          <p className="text-gray-500 text-sm">
+            Upload your resume to find AI-matched job recommendations
+          </p>
+        </motion.div>
+
+        <div className="mt-6">
           <input
+            ref={(input) => (window.fileInputRef = input)}
             type="file"
-            id="resume-file"
             accept=".pdf,.docx"
             onChange={handleFileChange}
-            style={{ display: 'none' }}
+            className="hidden"
+            id="resume-file-input"
           />
-          {file ? (
-            <div>
-              <p>Selected file: {file.name}</p>
-              <p>Size: {(file.size / 1024 / 1024).toFixed(2)} MB</p>
-            </div>
-          ) : (
-            <div>
-              <p>Drag and drop your resume here or click to browse</p>
-              <p>Supported formats: PDF, DOCX</p>
-            </div>
+          <motion.button
+            onClick={() => !uploading && document.getElementById('resume-file-input').click()}
+            whileHover={!uploading ? { scale: 1.05 } : {}}
+            whileTap={!uploading ? { scale: 0.95 } : {}}
+            className={`px-8 py-3 rounded-xl font-semibold text-white shadow-lg transition-all duration-300 ${
+              uploading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 cursor-pointer"
+            }`}
+            disabled={uploading}
+            type="button"
+          >
+            {uploading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Uploading...</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <AiOutlineUpload className="text-xl" />
+                <span>Choose File</span>
+              </div>
+            )}
+          </motion.button>
+
+          {fileName && !uploading && !error && (
+            <motion.p
+              className="mt-4 text-sm text-gray-700 font-medium flex items-center justify-center gap-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              {fileName}
+            </motion.p>
+          )}
+
+          {error && (
+            <motion.div
+              className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="flex items-start gap-2">
+                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <span>{error}</span>
+              </div>
+            </motion.div>
           )}
         </div>
-        
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        
-        <button 
-          type="submit" 
-          className="btn btn-primary" 
-          style={{ marginTop: '1rem', width: '100%' }}
-          disabled={!file || uploading}
-        >
-          {uploading ? 'Uploading...' : 'Find Matching Jobs'}
-        </button>
-      </form>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

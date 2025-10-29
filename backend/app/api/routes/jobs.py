@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, UploadFile, File
 from app.services.simple_job_aggregator import simple_job_aggregator
+from app.services.mock_job_service import mock_job_service
 from app.services.simple_job_matcher import simple_job_matcher
 from app.services.simple_job_recommendation_service import simple_job_recommendation_service
 from app.models.job import Job, JobMatch, JobSearchFilters, JobType, ExperienceLevel
@@ -217,6 +218,19 @@ async def search_jobs(
         
         # Get filtered jobs from aggregator
         jobs = simple_job_aggregator.get_scraped_jobs(filters)
+
+        # Seed with mock jobs if none available to prevent empty UI
+        if not jobs:
+            base_search = {
+                'keywords': keywords or '',
+                'location': location or '',
+                'company': company or '',
+                'country': country or ''
+            }
+            mock_jobs = mock_job_service.get_jobs(base_search)
+            # Extend aggregator storage for subsequent requests
+            simple_job_aggregator.scraped_jobs.extend(mock_jobs)
+            jobs = simple_job_aggregator.get_scraped_jobs(filters)
         
         return jobs[:limit]
         
