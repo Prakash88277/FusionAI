@@ -1,114 +1,106 @@
 // src/pages/Dashboard.js
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { FaSearch } from "react-icons/fa";
+import { FaSearch, FaSync } from "react-icons/fa";
 import JobCard from "../components/JobCard";
+import { getResumeMatches, getDatabaseStats } from "../services/api";
 
 const Dashboard = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setJobs([
-  {
-    id: 1,
-    title: "Software Engineer",
-    company: "Google",
-    location: "Bangalore, India",
-    matchScore: 92,
-    skills: ["Python", "React", "Machine Learning"],
-    apply_link:
-      "https://www.google.com/about/careers/applications/jobs/results/74939955737961158-software-engineer-iii-google-cloud",
-  },
-  {
-    id: 2,
-    title: "Data Analyst",
-    company: "Amazon",
-    location: "Hyderabad, India",
-    matchScore: 88,
-    skills: ["SQL", "Excel", "Tableau"],
-    apply_link: "https://www.amazon.jobs/en-gb/jobs/3088358/data-analyst-vendor-flex",
-  },
-  {
-    id: 3,
-    title: "AI Research Intern",
-    company: "Microsoft",
-    location: "Noida, India",
-    matchScore: 85,
-    skills: ["Deep Learning", "TensorFlow", "Python"],
-    apply_link: "https://careers.microsoft.com/students/us/en/job/AIResearchIntern",
-  },
-  {
-    id: 4,
-    title: "Frontend Developer",
-    company: "Meta (Facebook)",
-    location: "Remote",
-    matchScore: 83,
-    skills: ["React", "JavaScript", "HTML", "CSS"],
-    apply_link: "https://www.metacareers.com/jobs/frontend-developer",
-  },
-  {
-    id: 5,
-    title: "Backend Engineer",
-    company: "Netflix",
-    location: "Mumbai, India",
-    matchScore: 80,
-    skills: ["Node.js", "Express", "MongoDB"],
-    apply_link: "https://jobs.netflix.com/backend-engineer",
-  },
-  {
-    id: 6,
-    title: "Machine Learning Engineer",
-    company: "NVIDIA",
-    location: "Pune, India",
-    matchScore: 90,
-    skills: ["Python", "PyTorch", "CUDA"],
-    apply_link: "https://nvidia.wd5.myworkdayjobs.com/en-US/MachineLearningEngineer",
-  },
-  {
-    id: 7,
-    title: "Data Scientist",
-    company: "IBM",
-    location: "Bangalore, India",
-    matchScore: 86,
-    skills: ["Pandas", "NumPy", "Scikit-learn"],
-    apply_link: "https://www.ibm.com/careers/data-scientist",
-  },
-  {
-    id: 8,
-    title: "Cloud Solutions Architect",
-    company: "Google Cloud",
-    location: "Hyderabad, India",
-    matchScore: 89,
-    skills: ["Google Cloud", "Kubernetes", "DevOps"],
-    apply_link: "https://cloud.google.com/careers/solutions-architect",
-  },
-  {
-    id: 9,
-    title: "Full Stack Developer",
-    company: "Adobe",
-    location: "Gurgaon, India",
-    matchScore: 84,
-    skills: ["JavaScript", "React", "Flask", "REST APIs"],
-    apply_link: "https://adobe.wd5.myworkdayjobs.com/en-US/fullstack-developer",
-  },
-  {
-    id: 10,
-    title: "DevOps Engineer",
-    company: "Atlassian",
-    location: "Remote",
-    matchScore: 87,
-    skills: ["AWS", "CI/CD", "Docker", "Kubernetes"],
-    apply_link: "https://www.atlassian.com/company/careers/devops-engineer",
-  },
-]);
-
-      setLoading(false);
-    }, 1200);
+    loadJobs();
+    loadStats();
   }, []);
+
+  const loadStats = async () => {
+    try {
+      const response = await getDatabaseStats();
+      setStats(response.data);
+    } catch (err) {
+      console.error("Error loading stats:", err);
+    }
+  };
+
+  const loadJobs = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      // First try to load from localStorage (from recent upload)
+      const storedJobs = localStorage.getItem("jobRecommendations");
+      const resumeId = localStorage.getItem("resumeId");
+
+      if (storedJobs) {
+        const parsedJobs = JSON.parse(storedJobs);
+        console.log("Loaded jobs from localStorage:", parsedJobs);
+        
+        // Format jobs from localStorage
+        const formattedJobs = parsedJobs.map((item, index) => ({
+          id: item.job?.id || index,
+          title: item.job?.title || "Job Title",
+          company: item.job?.company || "Company",
+          location: item.job?.location || "Location",
+          description: item.job?.description || "",
+          skills: item.job?.skills || [],
+          matchScore: item.match_score || 0,
+          matching_skills: item.matching_skills || [],
+          missing_skills: item.missing_skills || [],
+          apply_link: item.job?.apply_link || "#",
+          job_type: item.job?.job_type,
+          experience_level: item.job?.experience_level,
+          salary_text: item.job?.salary_text,
+          posted_date: item.job?.posted_date,
+        }));
+        
+        setJobs(formattedJobs);
+        setLoading(false);
+        return;
+      }
+
+      // If no localStorage data, try to fetch from API using resumeId
+      if (resumeId) {
+        console.log("Fetching jobs from API for resume:", resumeId);
+        const response = await getResumeMatches(resumeId, 50, 30);
+        
+        if (response.data.job_matches && response.data.job_matches.length > 0) {
+          const formattedJobs = response.data.job_matches.map((item, index) => ({
+            id: item.job?.id || index,
+            title: item.job?.title || "Job Title",
+            company: item.job?.company || "Company",
+            location: item.job?.location || "Location",
+            description: item.job?.description || "",
+            skills: item.job?.skills || [],
+            matchScore: item.match_score || 0,
+            matching_skills: item.matching_skills || [],
+            missing_skills: item.missing_skills || [],
+            apply_link: item.job?.apply_link || "#",
+            job_type: item.job?.job_type,
+            experience_level: item.job?.experience_level,
+            salary_text: item.job?.salary_text,
+            posted_date: item.job?.posted_date,
+          }));
+          
+          setJobs(formattedJobs);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // If no data found, show message
+      setError("No jobs found. Please upload your resume or trigger job scraping.");
+      setLoading(false);
+
+    } catch (err) {
+      console.error("Error loading jobs:", err);
+      setError("Failed to load jobs. Make sure the backend is running and database has jobs.");
+      setLoading(false);
+    }
+  };
 
   const filteredJobs = jobs.filter((job) =>
     job.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -134,8 +126,44 @@ const Dashboard = () => {
           Explore AI-matched opportunities based on your uploaded resume
         </p>
 
-        {/* Search bar */}
-        <div className="mt-6 flex justify-center">
+        {/* Stats */}
+        {stats && (
+          <div className="mt-4 flex items-center justify-center gap-4 text-sm flex-wrap">
+            <span className="px-4 py-2 bg-blue-100 text-blue-800 rounded-full font-medium">
+              📊 {stats.total_jobs} Total Jobs in Database
+            </span>
+            {stats.active_jobs > 0 && (
+              <span className="px-4 py-2 bg-green-100 text-green-800 rounded-full font-medium">
+                ✅ {stats.active_jobs} Active Jobs
+              </span>
+            )}
+            {jobs.length > 0 && (
+              <span className="px-4 py-2 bg-purple-100 text-purple-800 rounded-full font-medium">
+                🎯 {jobs.length} Matches Found
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <motion.div
+            className="mt-4 max-w-2xl mx-auto bg-yellow-50 border border-yellow-200 rounded-xl p-4"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <p className="text-yellow-800 font-medium">{error}</p>
+            <button
+              onClick={loadJobs}
+              className="mt-2 text-sm text-yellow-600 hover:text-yellow-800 underline font-medium"
+            >
+              Try Again
+            </button>
+          </motion.div>
+        )}
+
+        {/* Search bar and Refresh */}
+        <div className="mt-6 flex justify-center gap-3 items-center">
           <div className="search-bar w-full max-w-lg flex items-center gap-3 px-4 py-3 bg-white shadow-md rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-blue-400">
             <FaSearch className="text-gray-400" />
             <input
@@ -146,11 +174,18 @@ const Dashboard = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <button
+            onClick={() => { loadJobs(); loadStats(); }}
+            className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2"
+            title="Refresh jobs"
+          >
+            <FaSync className="text-sm" />
+          </button>
         </div>
       </div>
 
       {/* Job Grid */}
-      <div className="max-w-7xl mx-auto grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="max-w-7xl mx-auto grid gap-6 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
         {loading
           ? [...Array(6)].map((_, i) => (
               <motion.div

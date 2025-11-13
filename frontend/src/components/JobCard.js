@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
 const JobCard = ({ job, index }) => {
+  const [showDescription, setShowDescription] = useState(false);
+
   const getMatchColor = (score) => {
     if (score >= 80) return 'text-green-600 bg-green-50';
     if (score >= 60) return 'text-blue-600 bg-blue-50';
@@ -32,7 +34,7 @@ const JobCard = ({ job, index }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
-      className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 hover:border-blue-200 transform hover:-translate-y-1"
+      className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 hover:border-blue-200 transform hover:-translate-y-1 h-full flex flex-col"
     >
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
@@ -57,34 +59,36 @@ const JobCard = ({ job, index }) => {
       </div>
 
       {/* Job Details */}
-      {job.description && (
-        <div className="mb-4">
-          <p className="text-gray-600 text-sm leading-relaxed line-clamp-2">
-            {job.description}
-          </p>
-        </div>
-      )}
-
-      {/* Skills */}
-      {job.skills && job.skills.length > 0 && (
-        <div className="mb-4">
-          <div className="flex flex-wrap gap-1.5">
-            {job.skills.slice(0, 5).map((skill, idx) => (
-              <span
-                key={idx}
-                className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs rounded-lg font-medium border border-blue-100"
-              >
-                {skill}
-              </span>
-            ))}
-            {job.skills.length > 5 && (
-              <span className="px-2.5 py-1 bg-gray-100 text-gray-600 text-xs rounded-lg font-medium">
-                +{job.skills.length - 5}
-              </span>
-            )}
+      <div className="flex-1 mb-4">
+        {job.description && (
+          <div className="mb-4">
+            <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">
+              {job.description}
+            </p>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Skills */}
+        {job.skills && job.skills.length > 0 && (
+          <div className="mb-4">
+            <div className="flex flex-wrap gap-1.5">
+              {job.skills.slice(0, 5).map((skill, idx) => (
+                <span
+                  key={idx}
+                  className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs rounded-lg font-medium border border-blue-100"
+                >
+                  {skill}
+                </span>
+              ))}
+              {job.skills.length > 5 && (
+                <span className="px-2.5 py-1 bg-gray-100 text-gray-600 text-xs rounded-lg font-medium">
+                  +{job.skills.length - 5}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Job Info */}
       <div className="flex flex-wrap gap-2 mb-4">
@@ -138,9 +142,15 @@ const JobCard = ({ job, index }) => {
           <span className="truncate">{job.posted_date ? new Date(job.posted_date).toLocaleDateString() : 'Recently'}</span>
         </div>
         <a
-          href={job.apply_link || '#'}
-          target="_blank"
+          href={job.apply_link && job.apply_link !== '#' ? job.apply_link : '#'}
+          target={job.apply_link && job.apply_link !== '#' ? "_blank" : "_self"}
           rel="noopener noreferrer"
+          onClick={(e) => {
+            if (!job.apply_link || job.apply_link === '#') {
+              e.preventDefault();
+              alert('Apply link not available for this job');
+            }
+          }}
           className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-5 py-2 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg flex-shrink-0"
         >
           <span>Apply</span>

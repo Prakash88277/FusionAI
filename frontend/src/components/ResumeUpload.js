@@ -1,9 +1,9 @@
 // src/components/ResumeUpload.js
 import React, { useState } from "react";
-import { motion } from "framer-motion";
-import { AiOutlineUpload } from "react-icons/ai";
 import { useNavigate } from "react-router-dom";
-import { uploadResumeAndRecommend } from "../services/api";
+import { motion } from "framer-motion";
+import { AiOutlineUpload, AiOutlineCheckCircle } from "react-icons/ai";
+import { uploadResumeAndMatch } from "../services/api";
 
 const ResumeUpload = ({ onUpload }) => {
   const [fileName, setFileName] = useState("");
@@ -23,8 +23,8 @@ const ResumeUpload = ({ onUpload }) => {
       const formData = new FormData();
       formData.append("file", file);
       
-      // Upload and get recommendations (fetching 50 jobs for more options)
-      const response = await uploadResumeAndRecommend(formData, "all", 50);
+      // Upload and match with database jobs (fetching 50 matches, min 30% score)
+      const response = await uploadResumeAndMatch(formData, 50, 30);
       
       // Store resume data
       if (response.data.resume_data) {
@@ -34,9 +34,9 @@ const ResumeUpload = ({ onUpload }) => {
         }
       }
       
-      // Store job recommendations
-      if (response.data.job_recommendations) {
-        localStorage.setItem("jobRecommendations", JSON.stringify(response.data.job_recommendations));
+      // Store job matches
+      if (response.data.job_matches) {
+        localStorage.setItem("jobRecommendations", JSON.stringify(response.data.job_matches));
       }
       
       // Mark upload as successful

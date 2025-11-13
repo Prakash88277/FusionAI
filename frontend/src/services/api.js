@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Create an axios instance with base URL
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8000/api";
+const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000/api";
 const API = axios.create({
   baseURL: API_BASE,
   timeout: 30000, // 30 second timeout
@@ -57,6 +57,28 @@ export const uploadResumeAndRecommend = (formData, jobSources = "all", limit = 2
     headers: { 'Content-Type': 'multipart/form-data' },
     params: { job_sources: jobSources, limit }
   });
+
+// Enhanced V2 API - uses database matching
+export const uploadResumeAndMatch = (formData, limit = 50, minMatchScore = 30) =>
+  API.post('/v2/resume/upload-and-match', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    params: { limit, min_match_score: minMatchScore }
+  });
+
+export const getResumeMatches = (resumeId, limit = 50, minMatchScore = 30) =>
+  API.get(`/v2/resume/matches/${resumeId}`, {
+    params: { limit, min_match_score: minMatchScore }
+  });
+
+export const getDatabaseStats = () => API.get('/v2/resume/stats');
+
+// Scraper control
+export const triggerScraping = (keywords, location = "India", limitPerSource = 50) =>
+  API.post('/scraper/scrape-now', null, {
+    params: { keywords, location, limit_per_source: limitPerSource }
+  });
+
+export const getScraperStatus = () => API.get('/scraper/scraper-status');
 
 // Job services
 export const searchJobs = ({ keywords, location, company, country, limit = 20 } = {}) =>

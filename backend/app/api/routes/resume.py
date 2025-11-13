@@ -1,5 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.services.simple_resume_parser import parse_resume
+from app.services.enhanced_resume_parser import parse_resume_enhanced
 from app.services.simple_job_recommendation_service import simple_job_recommendation_service
 from app.models.resume import ResumeData
 from typing import List, Dict
@@ -16,8 +17,8 @@ async def upload_resume(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Only PDF and DOCX files are supported")
     
     try:
-        # Parse resume
-        resume_data = await parse_resume(file)
+        # Parse resume using enhanced parser
+        resume_data = await parse_resume_enhanced(file)
         return resume_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error parsing resume: {str(e)}")

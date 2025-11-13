@@ -12,6 +12,7 @@ from app.services.simple_scrapers import (
     simple_microsoft_scraper,
     simple_internshala_scraper
 )
+from app.services.improved_scrapers import improved_scrapers, scrape_all_sources
 from app.models.job import Job, JobSearchFilters
 from app.services.mock_job_service import mock_job_service
 
@@ -31,13 +32,33 @@ class SimpleJobAggregator:
         self.scraped_jobs: List[Job] = []
     
     async def scrape_all_jobs(self, search_params: Dict[str, Any] = None) -> List[Job]:
-        """Scrape jobs from all active sources"""
-        all_jobs = []
-        
+        """Scrape jobs from all active sources using improved scrapers"""
         if not search_params:
             search_params = {}
         
-        logger.info(f"Starting job scraping from {len(self.active_scrapers)} sources")
+        logger.info("Starting job scraping using improved scrapers")
+        
+        try:
+            # Use improved scrapers for better job generation
+            all_jobs = await scrape_all_sources(search_params)
+            
+            # Store scraped jobs
+            self.scraped_jobs.extend(all_jobs)
+            
+            logger.info(f"Total jobs scraped: {len(all_jobs)}")
+            return all_jobs
+            
+        except Exception as e:
+            logger.error(f"Error in improved scraping, falling back to simple scrapers: {e}")
+            
+            # Fallback to simple scrapers
+            return await self._scrape_with_simple_scrapers(search_params)
+    
+    async def _scrape_with_simple_scrapers(self, search_params: Dict[str, Any]) -> List[Job]:
+        """Fallback method using simple scrapers"""
+        all_jobs = []
+        
+        logger.info(f"Starting fallback scraping from {len(self.active_scrapers)} sources")
         
         # Create tasks for concurrent scraping
         tasks = []
@@ -61,7 +82,7 @@ class SimpleJobAggregator:
         # Store scraped jobs
         self.scraped_jobs.extend(all_jobs)
         
-        logger.info(f"Total jobs scraped: {len(all_jobs)}")
+        logger.info(f"Total jobs scraped (fallback): {len(all_jobs)}")
         return all_jobs
     
     async def _scrape_source(self, scraper, source_name: str, search_params: Dict[str, Any]) -> List[Job]:
