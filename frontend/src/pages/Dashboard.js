@@ -3,14 +3,14 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { FaSearch, FaSync } from "react-icons/fa";
 import JobCard from "../components/JobCard";
-import { scrapeJobs, searchJobsBySkills, getJobStats } from "../services/zenrowsService";
+import { getJobs } from "../services/api";
 
 const Dashboard = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [stats, setStats] = useState(null);
+  const [showingFallback, setShowingFallback] = useState(false);
 
   useEffect(() => {
     loadJobs();
@@ -21,33 +21,82 @@ const Dashboard = () => {
     setError("");
 
     try {
-      console.log('🚀 Loading live jobs from ZenRows...');
+      console.log('🚀 Loading jobs from database...');
       
       // Check if user has uploaded a resume with skills
       const storedSkills = localStorage.getItem("userSkills");
+      let jobsResponse;
+      
       let jobs = [];
       
       if (storedSkills) {
         const skills = JSON.parse(storedSkills);
         console.log('👤 User skills found:', skills);
-        jobs = await searchJobsBySkills(skills);
+        console.log('🔍 Skills type:', typeof skills, 'Array?', Array.isArray(skills));
+        console.log('🔗 Skills joined:', skills.join(','));
+        
+        // Try to get jobs with skill matching first
+        try {
+          jobsResponse = await getJobs({ skills: skills.join(','), limit: 30 });
+          jobs = jobsResponse.data || jobsResponse || [];
+          console.log('📦 Raw API response:', jobsResponse);
+          console.log('📊 Extracted jobs:', jobs);
+          console.log(`🎯 Found ${jobs.length} jobs matching skills`);
+        } catch (error) {
+          console.log('⚠️ Skill-based search failed, trying fallback');
+        }
+        
+        // If no jobs found with skills, get all jobs and filter client-side
+        if (jobs.length === 0) {
+          console.log('🔄 No skill matches found, loading all jobs for client-side filtering...');
+          jobsResponse = await getJobs({ limit: 30 });
+          const allJobs = jobsResponse.data || jobsResponse || [];
+          console.log('📦 Fallback API response:', jobsResponse);
+          console.log('📊 All jobs for filtering:', allJobs.length);
+          
+          // Simple client-side filtering by skills
+          jobs = allJobs.filter(job => {
+            const jobSkills = Array.isArray(job.skills) ? job.skills.join(' ').toLowerCase() : (job.skills || '').toLowerCase();
+            const jobTitle = (job.title || '').toLowerCase();
+            const jobDescription = (job.description || '').toLowerCase();
+            
+            return skills.some(skill => 
+              jobSkills.includes(skill.toLowerCase()) ||
+              jobTitle.includes(skill.toLowerCase()) ||
+              jobDescription.includes(skill.toLowerCase())
+            );
+          });
+          
+          console.log(`🎯 Client-side filtering found ${jobs.length} matching jobs`);
+          
+          // If still no matches, show random 10 jobs related to general tech keywords
+          if (jobs.length === 0) {
+            console.log('🎲 No matches found, showing random tech jobs...');
+            setShowingFallback(true);
+            jobs = allJobs.filter(job => {
+              const jobContent = `${job.title} ${job.description} ${job.skills}`.toLowerCase();
+              return jobContent.includes('software') || 
+                     jobContent.includes('developer') || 
+                     jobContent.includes('engineer') ||
+                     jobContent.includes('programming') ||
+                     jobContent.includes('technology');
+            }).slice(0, 10);
+          } else {
+            setShowingFallback(false);
+          }
+        } else {
+          setShowingFallback(false);
+        }
       } else {
-        console.log('🔍 No user skills found, loading general tech jobs...');
-        jobs = await scrapeJobs(['software', 'developer', 'engineer', 'python', 'javascript']);
+        console.log('🔍 No user skills found, loading all jobs...');
+        jobsResponse = await getJobs({ limit: 30 });
+        jobs = jobsResponse.data || jobsResponse || [];
+        console.log('📦 No-skills API response:', jobsResponse);
+        console.log('📊 Jobs without skills filter:', jobs.length);
       }
       
-      console.log('✅ Jobs loaded:', jobs.length);
+      console.log('✅ Final jobs loaded:', jobs.length);
       setJobs(jobs);
-      
-      // Calculate and set stats
-      const jobStats = getJobStats(jobs);
-      setStats({
-        total_jobs: jobStats.total_jobs,
-        active_jobs: jobStats.active_jobs,
-        matches_found: jobs.length,
-        sources: Object.keys(jobStats.sources).length
-      });
-      
       setLoading(false);
 
     } catch (err) {
@@ -81,24 +130,6 @@ const Dashboard = () => {
           Explore AI-matched opportunities based on your uploaded resume
         </p>
 
-        {/* Stats */}
-        {stats && (
-          <div className="mt-4 flex items-center justify-center gap-4 text-sm flex-wrap">
-            <span className="px-4 py-2 bg-blue-100 text-blue-800 rounded-full font-medium">
-              📊 {stats.total_jobs} Live Jobs from ZenRows
-            </span>
-            {stats.active_jobs > 0 && (
-              <span className="px-4 py-2 bg-green-100 text-green-800 rounded-full font-medium">
-                ✅ {stats.active_jobs} Active Jobs
-              </span>
-            )}
-            {jobs.length > 0 && (
-              <span className="px-4 py-2 bg-purple-100 text-purple-800 rounded-full font-medium">
-                🎯 {jobs.length} Matches Found
-              </span>
-            )}
-          </div>
-        )}
 
         {/* Error Display */}
         {error && (
@@ -114,6 +145,22 @@ const Dashboard = () => {
             >
               Try Again
             </button>
+          </motion.div>
+        )}
+
+        {/* Fallback Jobs Message */}
+        {showingFallback && jobs.length > 0 && (
+          <motion.div
+            className="mt-4 max-w-2xl mx-auto bg-blue-50 border border-blue-200 rounded-xl p-4"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <p className="text-blue-800 font-medium">
+              🎯 No exact skill matches found. Showing {jobs.length} related tech jobs based on your resume keywords.
+            </p>
+            <p className="text-blue-600 text-sm mt-1">
+              Try uploading a different resume or browse all available positions below.
+            </p>
           </motion.div>
         )}
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, UploadFile, File
 from app.services.simple_job_aggregator import simple_job_aggregator
-from app.services.mock_job_service import mock_job_service
+from app.services.database_job_service import database_job_service
 from app.services.simple_job_matcher import simple_job_matcher
 from app.services.simple_job_recommendation_service import simple_job_recommendation_service
 from app.models.job import Job, JobMatch, JobSearchFilters, JobType, ExperienceLevel
@@ -196,43 +196,26 @@ async def search_jobs(
     salary_max: Optional[int] = Query(None, description="Maximum salary"),
     remote_only: Optional[bool] = Query(None, description="Remote jobs only"),
     posted_within_days: Optional[int] = Query(None, description="Posted within last N days"),
-    limit: int = Query(20, description="Maximum number of results")
+    limit: int = Query(100, description="Maximum number of results")
 ):
     """
-    Search for jobs from scraped data with advanced filtering
+    Search for jobs from database with advanced filtering
     """
     try:
-        # Create search filters
-        filters = JobSearchFilters(
-            keywords=[keywords] if keywords else None,
+        # Get jobs directly from database
+        jobs = database_job_service.get_jobs(
+            keywords=keywords,
             location=location,
-            country=country,
             company=company,
-            job_type=job_type,
-            experience_level=experience_level,
+            country=country,
+            job_type=job_type.value if job_type else None,
+            experience_level=experience_level.value if experience_level else None,
             salary_min=salary_min,
             salary_max=salary_max,
-            remote_only=remote_only,
-            posted_within_days=posted_within_days
+            limit=limit
         )
         
-        # Get filtered jobs from aggregator
-        jobs = simple_job_aggregator.get_scraped_jobs(filters)
-
-        # Seed with mock jobs if none available to prevent empty UI
-        if not jobs:
-            base_search = {
-                'keywords': keywords or '',
-                'location': location or '',
-                'company': company or '',
-                'country': country or ''
-            }
-            mock_jobs = mock_job_service.get_jobs(base_search)
-            # Extend aggregator storage for subsequent requests
-            simple_job_aggregator.scraped_jobs.extend(mock_jobs)
-            jobs = simple_job_aggregator.get_scraped_jobs(filters)
-        
-        return jobs[:limit]
+        return jobs
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error searching jobs: {str(e)}")

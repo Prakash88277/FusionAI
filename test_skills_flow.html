@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Skills Flow</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        input { padding: 8px; margin: 5px; width: 300px; }
+    </style>
+</head>
+<body>
+    <h1>Test Skills Flow & localStorage</h1>
+    <p>This tests the complete flow from skills storage to job retrieval</p>
+    
+    <div>
+        <h3>1. Simulate Resume Upload (Store Skills)</h3>
+        <input type="text" id="skillsInput" placeholder="Enter skills (comma separated)" value="python,javascript,react,aws">
+        <button onclick="storeSkills()">Store Skills in localStorage</button>
+        <button onclick="clearSkills()">Clear Skills</button>
+    </div>
+    
+    <div>
+        <h3>2. Test Dashboard Flow</h3>
+        <button onclick="testDashboardFlow()">Test Complete Dashboard Flow</button>
+        <button onclick="checkLocalStorage()">Check localStorage</button>
+    </div>
+    
+    <div>
+        <h3>3. Direct API Tests</h3>
+        <button onclick="testAPIWithSkills()">Test API with Skills</button>
+        <button onclick="testAPIWithoutSkills()">Test API without Skills</button>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+        
+        function addResult(message, isSuccess = true) {
+            const div = document.createElement('div');
+            div.className = `result ${isSuccess ? 'success' : 'error'}`;
+            div.innerHTML = message;
+            document.getElementById('results').appendChild(div);
+        }
+        
+        function storeSkills() {
+            const skillsText = document.getElementById('skillsInput').value;
+            const skillsArray = skillsText.split(',').map(s => s.trim()).filter(s => s);
+            
+            localStorage.setItem('userSkills', JSON.stringify(skillsArray));
+            addResult(`✅ Stored skills: ${JSON.stringify(skillsArray)}`);
+        }
+        
+        function clearSkills() {
+            localStorage.removeItem('userSkills');
+            localStorage.removeItem('resumeData');
+            localStorage.removeItem('resumeKeywords');
+            localStorage.removeItem('resumeUploaded');
+            addResult('🗑️ Cleared all localStorage data');
+        }
+        
+        function checkLocalStorage() {
+            const skills = localStorage.getItem('userSkills');
+            const resumeData = localStorage.getItem('resumeData');
+            const uploaded = localStorage.getItem('resumeUploaded');
+            
+            addResult(`📊 localStorage Status:`);
+            addResult(`   userSkills: ${skills || 'null'}`);
+            addResult(`   resumeUploaded: ${uploaded || 'null'}`);
+            addResult(`   resumeData: ${resumeData ? 'exists' : 'null'}`);
+        }
+        
+        async function testDashboardFlow() {
+            try {
+                addResult('🚀 Testing complete Dashboard flow...');
+                
+                // Simulate Dashboard.js logic
+                const storedSkills = localStorage.getItem("userSkills");
+                let jobs = [];
+                
+                if (storedSkills) {
+                    const skills = JSON.parse(storedSkills);
+                    addResult(`👤 Found skills: ${JSON.stringify(skills)}`);
+                    
+                    // Test API call with skills
+                    const response = await fetch(`${API_BASE}/jobs/search?keywords=${skills.join(',')}&limit=20`);
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        jobs = Array.isArray(data) ? data : (data.data || []);
+                        addResult(`✅ API returned ${jobs.length} jobs with skills filter`);
+                        
+                        if (jobs.length === 0) {
+                            addResult('🔄 No skill matches, testing fallback...');
+                            
+                            // Test fallback
+                            const fallbackResponse = await fetch(`${API_BASE}/jobs/search?limit=20`);
+                            const fallbackData = await fallbackResponse.json();
+                            
+                            if (fallbackResponse.ok) {
+                                const allJobs = Array.isArray(fallbackData) ? fallbackData : (fallbackData.data || []);
+                                addResult(`📊 Fallback API returned ${allJobs.length} total jobs`);
+                                
+                                // Client-side filtering
+                                const filtered = allJobs.filter(job => {
+                                    const jobSkills = Array.isArray(job.skills) ? job.skills.join(' ').toLowerCase() : (job.skills || '').toLowerCase();
+                                    const jobTitle = (job.title || '').toLowerCase();
+                                    const jobDescription = (job.description || '').toLowerCase();
+                                    
+                                    return skills.some(skill => 
+                                        jobSkills.includes(skill.toLowerCase()) ||
+                                        jobTitle.includes(skill.toLowerCase()) ||
+                                        jobDescription.includes(skill.toLowerCase())
+                                    );
+                                });
+                                
+                                addResult(`🎯 Client-side filtering found ${filtered.length} matching jobs`);
+                                
+                                if (filtered.length > 0) {
+                                    addResult(`📋 Sample match: ${filtered[0].title} at ${filtered[0].company}`);
+                                } else {
+                                    addResult('⚠️ No matches found even with client-side filtering!', false);
+                                }
+                            }
+                        } else {
+                            addResult(`📋 Sample job: ${jobs[0].title} at ${jobs[0].company}`);
+                        }
+                    } else {
+                        addResult(`❌ API Error: ${response.status}`, false);
+                    }
+                } else {
+                    addResult('⚠️ No skills found in localStorage', false);
+                }
+                
+            } catch (error) {
+                addResult(`❌ Dashboard flow error: ${error.message}`, false);
+            }
+        }
+        
+        async function testAPIWithSkills() {
+            try {
+                const skills = ['python', 'javascript', 'react'];
+                addResult(`🔍 Testing API with skills: ${skills.join(', ')}`);
+                
+                const response = await fetch(`${API_BASE}/jobs/search?keywords=${skills.join(',')}&limit=10`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const jobs = Array.isArray(data) ? data : (data.data || []);
+                    addResult(`✅ API Success: ${jobs.length} jobs found`);
+                    
+                    if (jobs.length > 0) {
+                        addResult(`📋 First job: ${jobs[0].title} - Skills: ${JSON.stringify(jobs[0].skills)}`);
+                    }
+                } else {
+                    addResult(`❌ API Error: ${response.status}`, false);
+                }
+            } catch (error) {
+                addResult(`❌ API Exception: ${error.message}`, false);
+            }
+        }
+        
+        async function testAPIWithoutSkills() {
+            try {
+                addResult('🔍 Testing API without skills filter...');
+                
+                const response = await fetch(`${API_BASE}/jobs/search?limit=10`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const jobs = Array.isArray(data) ? data : (data.data || []);
+                    addResult(`✅ API Success: ${jobs.length} jobs found`);
+                    
+                    if (jobs.length > 0) {
+                        addResult(`📋 First job: ${jobs[0].title} at ${jobs[0].company}`);
+                    }
+                } else {
+                    addResult(`❌ API Error: ${response.status}`, false);
+                }
+            } catch (error) {
+                addResult(`❌ API Exception: ${error.message}`, false);
+            }
+        }
+        
+        // Auto-check localStorage on load
+        window.onload = function() {
+            checkLocalStorage();
+        };
+    </script>
+</body>
+</html>

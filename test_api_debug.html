@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug API Calls</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Debug Dashboard API Issue</h1>
+    <p>Testing why "No matching jobs found" appears when there are 396 jobs in database</p>
+    
+    <button onclick="testBasicAPI()">Test Basic Jobs API</button>
+    <button onclick="testWithSkills()">Test with Skills Filter</button>
+    <button onclick="testEmptySkills()">Test with Empty Skills</button>
+    <button onclick="simulateUserSkills()">Simulate User Skills</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+        
+        function addResult(message, isSuccess = true, data = null) {
+            const div = document.createElement('div');
+            div.className = `result ${isSuccess ? 'success' : 'error'}`;
+            div.innerHTML = message;
+            if (data) {
+                const pre = document.createElement('pre');
+                pre.textContent = JSON.stringify(data, null, 2);
+                div.appendChild(pre);
+            }
+            document.getElementById('results').appendChild(div);
+        }
+        
+        async function testBasicAPI() {
+            try {
+                addResult('🔍 Testing basic jobs API (no filters)...');
+                const response = await fetch(`${API_BASE}/jobs/search?limit=10`);
+                const data = await response.json();
+                
+                if (response.ok && Array.isArray(data)) {
+                    addResult(`✅ Basic API Success: Found ${data.length} jobs`);
+                    addResult(`📊 Sample job data:`, true, {
+                        title: data[0]?.title,
+                        company: data[0]?.company,
+                        skills: data[0]?.skills,
+                        description: data[0]?.description?.substring(0, 100) + '...'
+                    });
+                } else {
+                    addResult(`❌ Basic API Error: ${response.status}`, false, data);
+                }
+            } catch (error) {
+                addResult(`❌ Basic API Exception: ${error.message}`, false);
+            }
+        }
+        
+        async function testWithSkills() {
+            try {
+                addResult('🎯 Testing with skills filter...');
+                const response = await fetch(`${API_BASE}/jobs/search?keywords=python,javascript&limit=10`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ Skills Filter Success: Found ${Array.isArray(data) ? data.length : 'non-array'} results`);
+                    if (Array.isArray(data) && data.length > 0) {
+                        addResult(`📊 First matching job:`, true, {
+                            title: data[0]?.title,
+                            company: data[0]?.company,
+                            skills: data[0]?.skills
+                        });
+                    } else {
+                        addResult(`⚠️ No jobs returned for skills filter`, false);
+                    }
+                } else {
+                    addResult(`❌ Skills Filter Error: ${response.status}`, false, data);
+                }
+            } catch (error) {
+                addResult(`❌ Skills Filter Exception: ${error.message}`, false);
+            }
+        }
+        
+        async function testEmptySkills() {
+            try {
+                addResult('🔍 Testing with empty skills parameter...');
+                const response = await fetch(`${API_BASE}/jobs/search?keywords=&limit=10`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ Empty Skills Success: Found ${Array.isArray(data) ? data.length : 'non-array'} results`);
+                } else {
+                    addResult(`❌ Empty Skills Error: ${response.status}`, false, data);
+                }
+            } catch (error) {
+                addResult(`❌ Empty Skills Exception: ${error.message}`, false);
+            }
+        }
+        
+        async function simulateUserSkills() {
+            try {
+                // Simulate what the frontend does
+                addResult('🎭 Simulating frontend user skills flow...');
+                
+                // Test skills that should exist in database
+                const testSkills = ['python', 'java', 'javascript', 'software', 'engineer'];
+                addResult(`🔍 Testing with skills: ${testSkills.join(', ')}`);
+                
+                const response = await fetch(`${API_BASE}/jobs/search?keywords=${testSkills.join(',')}&limit=20`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ User Skills Simulation: Found ${Array.isArray(data) ? data.length : 'non-array'} results`);
+                    
+                    if (Array.isArray(data)) {
+                        if (data.length === 0) {
+                            addResult(`⚠️ ISSUE FOUND: API returns empty array even with common skills!`, false);
+                            
+                            // Try fallback - get all jobs
+                            addResult(`🔄 Testing fallback - getting all jobs...`);
+                            const fallbackResponse = await fetch(`${API_BASE}/jobs/search?limit=20`);
+                            const fallbackData = await fallbackResponse.json();
+                            
+                            if (fallbackResponse.ok && Array.isArray(fallbackData)) {
+                                addResult(`✅ Fallback Success: Found ${fallbackData.length} total jobs`);
+                                
+                                // Test client-side filtering
+                                const filtered = fallbackData.filter(job => {
+                                    const jobContent = `${job.title} ${job.description} ${job.skills}`.toLowerCase();
+                                    return testSkills.some(skill => jobContent.includes(skill.toLowerCase()));
+                                });
+                                
+                                addResult(`🎯 Client-side filtering result: ${filtered.length} matching jobs`);
+                                
+                                if (filtered.length > 0) {
+                                    addResult(`📊 Sample filtered job:`, true, {
+                                        title: filtered[0]?.title,
+                                        company: filtered[0]?.company,
+                                        skills: filtered[0]?.skills
+                                    });
+                                }
+                            }
+                        } else {
+                            addResult(`📊 Skills matching works! Sample jobs:`, true, 
+                                data.slice(0, 2).map(job => ({
+                                    title: job.title,
+                                    company: job.company,
+                                    skills: job.skills
+                                }))
+                            );
+                        }
+                    }
+                } else {
+                    addResult(`❌ User Skills Error: ${response.status}`, false, data);
+                }
+            } catch (error) {
+                addResult(`❌ User Skills Exception: ${error.message}`, false);
+            }
+        }
+        
+        // Auto-run basic test
+        window.onload = function() {
+            addResult('🚀 Starting debug tests...');
+            setTimeout(testBasicAPI, 500);
+        };
+    </script>
+</body>
+</html>

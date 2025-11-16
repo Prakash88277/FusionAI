@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { AiOutlineUpload, AiOutlineCheckCircle } from "react-icons/ai";
 import { uploadResumeNew } from "../services/api";
-import { searchJobsBySkills } from "../services/zenrowsService";
+// Mock service no longer needed - using real API
 
 const ResumeUpload = ({ onUpload }) => {
   const [fileName, setFileName] = useState("");

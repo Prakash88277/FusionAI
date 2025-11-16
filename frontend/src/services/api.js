@@ -99,6 +99,13 @@ export const matchJobsWithResume = (resumeId, { country, limit = 20 } = {}) =>
 
 export const getJobById = (jobId) => API.get(`/jobs/${jobId}`);
 
+// Get all jobs with optional filtering
+export const getJobs = ({ skills, limit = 100 } = {}) =>
+  API.get('/jobs/search', {
+    params: { keywords: skills, limit }
+  });
+
+
 // Auth services
 export const register = (userData) => API.post('/auth/register', userData);
 

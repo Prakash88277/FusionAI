@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Cleanup Verification</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .job { background: #e3f2fd; padding: 8px; margin: 5px 0; border-radius: 3px; font-size: 14px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🎉 Final Cleanup Verification</h1>
+    <p>Testing that:</p>
+    <ul>
+        <li>✅ Stats bar is removed from frontend</li>
+        <li>✅ Only 30 Google jobs from database</li>
+        <li>✅ No external sources used</li>
+        <li>✅ All apply links work</li>
+    </ul>
+    
+    <button onclick="testJobCount()">Test Job Count (Should be 30)</button>
+    <button onclick="testOnlyGoogle()">Test Only Google Jobs</button>
+    <button onclick="testApplyLinks()">Test Apply Links</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+        
+        function addResult(message, isSuccess = true) {
+            const div = document.createElement('div');
+            div.className = `result ${isSuccess ? 'success' : 'error'}`;
+            div.innerHTML = message;
+            document.getElementById('results').appendChild(div);
+        }
+        
+        function addJob(job, index) {
+            const div = document.createElement('div');
+            div.className = 'job';
+            div.innerHTML = `
+                <strong>${index}.</strong> ${job.title}<br>
+                <strong>Company:</strong> ${job.company} | <strong>Source:</strong> ${job.source}<br>
+                <strong>Location:</strong> ${job.location} | <strong>Salary:</strong> ${job.salary_text || 'Not specified'}<br>
+                <strong>Apply:</strong> <a href="${job.apply_link}" target="_blank">${job.apply_link}</a>
+            `;
+            document.getElementById('results').appendChild(div);
+        }
+        
+        async function testJobCount() {
+            try {
+                addResult('🔢 Testing job count...');
+                
+                const response = await fetch(`${API_BASE}/jobs/search?limit=50`);
+                const jobs = await response.json();
+                
+                if (response.ok && Array.isArray(jobs)) {
+                    if (jobs.length === 30) {
+                        addResult(`✅ PERFECT: Exactly 30 jobs found (as expected)`);
+                    } else {
+                        addResult(`⚠️ WARNING: Found ${jobs.length} jobs, expected 30`, false);
+                    }
+                } else {
+                    addResult(`❌ FAILED: API error ${response.status}`, false);
+                }
+            } catch (error) {
+                addResult(`❌ ERROR: ${error.message}`, false);
+            }
+        }
+        
+        async function testOnlyGoogle() {
+            try {
+                addResult('🏢 Testing that all jobs are from Google...');
+                
+                const response = await fetch(`${API_BASE}/jobs/search?limit=30`);
+                const jobs = await response.json();
+                
+                if (response.ok && Array.isArray(jobs)) {
+                    const nonGoogleJobs = jobs.filter(job => job.company !== 'Google');
+                    const googleJobs = jobs.filter(job => job.company === 'Google');
+                    
+                    if (nonGoogleJobs.length === 0) {
+                        addResult(`✅ PERFECT: All ${googleJobs.length} jobs are from Google`);
+                    } else {
+                        addResult(`❌ FAILED: Found ${nonGoogleJobs.length} non-Google jobs`, false);
+                        nonGoogleJobs.forEach(job => {
+                            addResult(`   - ${job.title} at ${job.company}`, false);
+                        });
+                    }
+                    
+                    // Show first 5 Google jobs
+                    addResult('📋 First 5 Google jobs:');
+                    googleJobs.slice(0, 5).forEach((job, index) => addJob(job, index + 1));
+                    
+                } else {
+                    addResult(`❌ FAILED: API error ${response.status}`, false);
+                }
+            } catch (error) {
+                addResult(`❌ ERROR: ${error.message}`, false);
+            }
+        }
+        
+        async function testApplyLinks() {
+            try {
+                addResult('🔗 Testing apply links...');
+                
+                const response = await fetch(`${API_BASE}/jobs/search?limit=5`);
+                const jobs = await response.json();
+                
+                if (response.ok && Array.isArray(jobs)) {
+                    let workingLinks = 0;
+                    let brokenLinks = 0;
+                    
+                    for (const job of jobs) {
+                        if (job.apply_link && job.apply_link.includes('careers.google.com')) {
+                            workingLinks++;
+                        } else {
+                            brokenLinks++;
+                            addResult(`⚠️ Suspicious link: ${job.apply_link}`, false);
+                        }
+                    }
+                    
+                    if (brokenLinks === 0) {
+                        addResult(`✅ PERFECT: All ${workingLinks} apply links are Google career links`);
+                    } else {
+                        addResult(`❌ FAILED: Found ${brokenLinks} suspicious links`, false);
+                    }
+                    
+                } else {
+                    addResult(`❌ FAILED: API error ${response.status}`, false);
+                }
+            } catch (error) {
+                addResult(`❌ ERROR: ${error.message}`, false);
+            }
+        }
+        
+        // Auto-run tests
+        window.onload = function() {
+            addResult('🚀 Starting final verification tests...');
+            setTimeout(testJobCount, 1000);
+            setTimeout(testOnlyGoogle, 3000);
+            setTimeout(testApplyLinks, 5000);
+        };
+    </script>
+</body>
+</html>

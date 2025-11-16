@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "name": "fusionai-job-search",
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/$1"
+    }
+  ],
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/build",
+  "installCommand": "cd frontend && npm install",
+  "framework": "create-react-app",
+  "regions": ["bom1"],
+  "env": {
+    "REACT_APP_API_BASE": "https://fusionai-job-search.vercel.app/api"
+  }
+}

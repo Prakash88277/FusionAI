@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dashboard API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Dashboard API Test</h1>
+    <p>Testing the connection between frontend and backend with 396 jobs</p>
+    
+    <button onclick="testJobsAPI()">Test Jobs API</button>
+    <button onclick="testStatsAPI()">Test Stats API</button>
+    <button onclick="testWithSkills()">Test with Skills</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+        
+        function addResult(message, isSuccess = true) {
+            const div = document.createElement('div');
+            div.className = `result ${isSuccess ? 'success' : 'error'}`;
+            div.innerHTML = message;
+            document.getElementById('results').appendChild(div);
+        }
+        
+        async function testJobsAPI() {
+            try {
+                addResult('🔍 Testing jobs API...');
+                const response = await fetch(`${API_BASE}/jobs/search?limit=50`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ Jobs API Success: Found ${data.length} jobs`);
+                    addResult(`📊 Sample job: ${data[0]?.title} at ${data[0]?.company}`);
+                } else {
+                    addResult(`❌ Jobs API Error: ${response.status}`, false);
+                }
+            } catch (error) {
+                addResult(`❌ Jobs API Exception: ${error.message}`, false);
+            }
+        }
+        
+        async function testStatsAPI() {
+            try {
+                addResult('📊 Testing stats API...');
+                const response = await fetch(`${API_BASE}/v2/resume/stats`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ Stats API Success: ${data.total_jobs} total jobs, ${data.active_jobs} active`);
+                    addResult(`📈 Sources: ${JSON.stringify(data.jobs_by_source)}`);
+                } else {
+                    addResult(`❌ Stats API Error: ${response.status}`, false);
+                }
+            } catch (error) {
+                addResult(`❌ Stats API Exception: ${error.message}`, false);
+            }
+        }
+        
+        async function testWithSkills() {
+            try {
+                addResult('🎯 Testing with skills filter...');
+                const response = await fetch(`${API_BASE}/jobs/search?keywords=python,javascript&limit=20`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ Skills Filter Success: Found ${data.length} matching jobs`);
+                    data.slice(0, 3).forEach(job => {
+                        addResult(`🎯 Match: ${job.title} at ${job.company} - Skills: ${job.skills}`);
+                    });
+                } else {
+                    addResult(`❌ Skills Filter Error: ${response.status}`, false);
+                }
+            } catch (error) {
+                addResult(`❌ Skills Filter Exception: ${error.message}`, false);
+            }
+        }
+        
+        // Auto-run tests on page load
+        window.onload = function() {
+            addResult('🚀 Starting API tests...');
+            setTimeout(testJobsAPI, 1000);
+            setTimeout(testStatsAPI, 2000);
+            setTimeout(testWithSkills, 3000);
+        };
+    </script>
+</body>
+</html>
