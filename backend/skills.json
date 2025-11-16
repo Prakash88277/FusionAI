@@ -1,0 +1,44 @@
+{
+  "programming_languages": [
+    "python", "javascript", "java", "c++", "c#", "php", "ruby", "go", "rust", "swift",
+    "kotlin", "typescript", "scala", "r", "matlab", "perl", "shell", "bash", "powershell"
+  ],
+  "web_technologies": [
+    "html", "css", "react", "angular", "vue", "node.js", "express", "django", "flask",
+    "spring", "laravel", "rails", "asp.net", "jquery", "bootstrap", "tailwind", "sass",
+    "webpack", "babel", "npm", "yarn"
+  ],
+  "databases": [
+    "mysql", "postgresql", "mongodb", "sqlite", "redis", "cassandra", "oracle",
+    "sql server", "dynamodb", "elasticsearch", "neo4j", "firebase"
+  ],
+  "cloud_platforms": [
+    "aws", "azure", "google cloud", "gcp", "heroku", "digitalocean", "linode",
+    "cloudflare", "vercel", "netlify"
+  ],
+  "devops_tools": [
+    "docker", "kubernetes", "jenkins", "gitlab ci", "github actions", "terraform",
+    "ansible", "chef", "puppet", "vagrant", "nginx", "apache", "linux", "ubuntu",
+    "centos", "ci/cd", "monitoring", "logging"
+  ],
+  "data_science": [
+    "machine learning", "deep learning", "artificial intelligence", "pandas", "numpy",
+    "scikit-learn", "tensorflow", "pytorch", "keras", "opencv", "nltk", "spacy",
+    "jupyter", "anaconda", "data analysis", "statistics", "visualization"
+  ],
+  "mobile_development": [
+    "android", "ios", "flutter", "react native", "xamarin", "ionic", "cordova",
+    "swift", "objective-c", "kotlin", "java"
+  ],
+  "testing": [
+    "unit testing", "integration testing", "selenium", "cypress", "jest", "mocha",
+    "pytest", "junit", "testng", "automation testing"
+  ],
+  "version_control": [
+    "git", "github", "gitlab", "bitbucket", "svn", "mercurial"
+  ],
+  "soft_skills": [
+    "communication", "teamwork", "leadership", "problem solving", "analytical thinking",
+    "project management", "agile", "scrum", "kanban", "time management"
+  ]
+}

@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { FaSearch, FaSync } from "react-icons/fa";
 import JobCard from "../components/JobCard";
-import { getResumeMatches, getDatabaseStats } from "../services/api";
+import { scrapeJobs, searchJobsBySkills, getJobStats } from "../services/zenrowsService";
 
 const Dashboard = () => {
   const [jobs, setJobs] = useState([]);
@@ -14,90 +14,45 @@ const Dashboard = () => {
 
   useEffect(() => {
     loadJobs();
-    loadStats();
   }, []);
-
-  const loadStats = async () => {
-    try {
-      const response = await getDatabaseStats();
-      setStats(response.data);
-    } catch (err) {
-      console.error("Error loading stats:", err);
-    }
-  };
 
   const loadJobs = async () => {
     setLoading(true);
     setError("");
 
     try {
-      // First try to load from localStorage (from recent upload)
-      const storedJobs = localStorage.getItem("jobRecommendations");
-      const resumeId = localStorage.getItem("resumeId");
-
-      if (storedJobs) {
-        const parsedJobs = JSON.parse(storedJobs);
-        console.log("Loaded jobs from localStorage:", parsedJobs);
-        
-        // Format jobs from localStorage
-        const formattedJobs = parsedJobs.map((item, index) => ({
-          id: item.job?.id || index,
-          title: item.job?.title || "Job Title",
-          company: item.job?.company || "Company",
-          location: item.job?.location || "Location",
-          description: item.job?.description || "",
-          skills: item.job?.skills || [],
-          matchScore: item.match_score || 0,
-          matching_skills: item.matching_skills || [],
-          missing_skills: item.missing_skills || [],
-          apply_link: item.job?.apply_link || "#",
-          job_type: item.job?.job_type,
-          experience_level: item.job?.experience_level,
-          salary_text: item.job?.salary_text,
-          posted_date: item.job?.posted_date,
-        }));
-        
-        setJobs(formattedJobs);
-        setLoading(false);
-        return;
+      console.log('🚀 Loading live jobs from ZenRows...');
+      
+      // Check if user has uploaded a resume with skills
+      const storedSkills = localStorage.getItem("userSkills");
+      let jobs = [];
+      
+      if (storedSkills) {
+        const skills = JSON.parse(storedSkills);
+        console.log('👤 User skills found:', skills);
+        jobs = await searchJobsBySkills(skills);
+      } else {
+        console.log('🔍 No user skills found, loading general tech jobs...');
+        jobs = await scrapeJobs(['software', 'developer', 'engineer', 'python', 'javascript']);
       }
-
-      // If no localStorage data, try to fetch from API using resumeId
-      if (resumeId) {
-        console.log("Fetching jobs from API for resume:", resumeId);
-        const response = await getResumeMatches(resumeId, 50, 30);
-        
-        if (response.data.job_matches && response.data.job_matches.length > 0) {
-          const formattedJobs = response.data.job_matches.map((item, index) => ({
-            id: item.job?.id || index,
-            title: item.job?.title || "Job Title",
-            company: item.job?.company || "Company",
-            location: item.job?.location || "Location",
-            description: item.job?.description || "",
-            skills: item.job?.skills || [],
-            matchScore: item.match_score || 0,
-            matching_skills: item.matching_skills || [],
-            missing_skills: item.missing_skills || [],
-            apply_link: item.job?.apply_link || "#",
-            job_type: item.job?.job_type,
-            experience_level: item.job?.experience_level,
-            salary_text: item.job?.salary_text,
-            posted_date: item.job?.posted_date,
-          }));
-          
-          setJobs(formattedJobs);
-          setLoading(false);
-          return;
-        }
-      }
-
-      // If no data found, show message
-      setError("No jobs found. Please upload your resume or trigger job scraping.");
+      
+      console.log('✅ Jobs loaded:', jobs.length);
+      setJobs(jobs);
+      
+      // Calculate and set stats
+      const jobStats = getJobStats(jobs);
+      setStats({
+        total_jobs: jobStats.total_jobs,
+        active_jobs: jobStats.active_jobs,
+        matches_found: jobs.length,
+        sources: Object.keys(jobStats.sources).length
+      });
+      
       setLoading(false);
 
     } catch (err) {
-      console.error("Error loading jobs:", err);
-      setError("Failed to load jobs. Make sure the backend is running and database has jobs.");
+      console.error("❌ Error loading jobs:", err);
+      setError(`Failed to load jobs: ${err.message}`);
       setLoading(false);
     }
   };
@@ -130,7 +85,7 @@ const Dashboard = () => {
         {stats && (
           <div className="mt-4 flex items-center justify-center gap-4 text-sm flex-wrap">
             <span className="px-4 py-2 bg-blue-100 text-blue-800 rounded-full font-medium">
-              📊 {stats.total_jobs} Total Jobs in Database
+              📊 {stats.total_jobs} Live Jobs from ZenRows
             </span>
             {stats.active_jobs > 0 && (
               <span className="px-4 py-2 bg-green-100 text-green-800 rounded-full font-medium">
@@ -175,11 +130,12 @@ const Dashboard = () => {
             />
           </div>
           <button
-            onClick={() => { loadJobs(); loadStats(); }}
+            onClick={loadJobs}
             className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2"
             title="Refresh jobs"
+            disabled={loading}
           >
-            <FaSync className="text-sm" />
+            <FaSync className={`text-sm ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>

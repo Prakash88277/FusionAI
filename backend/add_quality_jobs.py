@@ -1,4 +1,4 @@
-"""
+  """
 Add high-quality jobs with real apply links to the database
 """
 import sqlite3

@@ -142,11 +142,12 @@ const JobCard = ({ job, index }) => {
           <span className="truncate">{job.posted_date ? new Date(job.posted_date).toLocaleDateString() : 'Recently'}</span>
         </div>
         <a
-          href={job.apply_link && job.apply_link !== '#' ? job.apply_link : '#'}
-          target={job.apply_link && job.apply_link !== '#' ? "_blank" : "_self"}
+          href={job.apply_link || job.applyLink || job.apply_url || '#'}
+          target={job.apply_link || job.applyLink || job.apply_url ? "_blank" : "_self"}
           rel="noopener noreferrer"
           onClick={(e) => {
-            if (!job.apply_link || job.apply_link === '#') {
+            const applyLink = job.apply_link || job.applyLink || job.apply_url;
+            if (!applyLink || applyLink === '#') {
               e.preventDefault();
               alert('Apply link not available for this job');
             }

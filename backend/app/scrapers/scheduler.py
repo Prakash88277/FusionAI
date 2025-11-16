@@ -23,26 +23,29 @@ class JobScrapingScheduler:
         self.thread = None
     
     def scrape_jobs_task(self):
-        """Task to scrape jobs"""
-        logger.info(f"[SCHEDULE] Starting scheduled job scraping at {datetime.now()}")
+        """Task to scrape jobs - DISABLED: Now using ZenRows live scraping on resume upload"""
+        logger.info(f"[SCHEDULE] Scheduled job scraping disabled - using ZenRows live scraping")
         
-        db = SessionLocal()
-        try:
-            # Scrape jobs with common tech keywords
-            keywords = ['software', 'developer', 'engineer', 'data', 'python', 'java']
-            result = scraper_manager.scrape_and_save(
-                db=db,
-                keywords=keywords,
-                location="India",
-                limit_per_source=100
-            )
-            
-            logger.info(f"[OK] Scheduled scraping completed: {result}")
-            
-        except Exception as e:
-            logger.error(f"[ERROR] Error in scheduled scraping: {str(e)}")
-        finally:
-            db.close()
+        # OLD STATIC SCRAPING - COMMENTED OUT FOR ZENROWS INTEGRATION
+        # db = SessionLocal()
+        # try:
+        #     # Scrape jobs with common tech keywords
+        #     keywords = ['software', 'developer', 'engineer', 'data', 'python', 'java']
+        #     result = scraper_manager.scrape_and_save(
+        #         db=db,
+        #         keywords=keywords,
+        #         location="India",
+        #         limit_per_source=100
+        #     )
+        #     
+        #     logger.info(f"[OK] Scheduled scraping completed: {result}")
+        #     
+        # except Exception as e:
+        #     logger.error(f"[ERROR] Error in scheduled scraping: {str(e)}")
+        # finally:
+        #     db.close()
+        
+        logger.info("[INFO] Static job scraping disabled. Jobs are now scraped live via ZenRows when users upload resumes.")
     
     def run_scheduler(self):
         """Run the scheduler loop"""
@@ -57,19 +60,21 @@ class JobScrapingScheduler:
         logger.info("[STARTUP] Checking database status in 5 seconds...")
         time.sleep(5)
         
-        # Check if database has jobs
+        # Check database status - no longer pre-populating
         db = SessionLocal()
         try:
             job_count = db.query(Job).count()
             logger.info(f"[STARTUP] Database currently has {job_count} jobs")
+            logger.info("[STARTUP] Static job seeding disabled. Jobs will be scraped live via ZenRows when users upload resumes.")
             
-            if job_count == 0:
-                # Run initial scraping to populate database
-                logger.info("[STARTUP] Database is empty. Running initial job scraping...")
-                self.scrape_jobs_task()
-                logger.info("[STARTUP] Initial scraping complete! Database populated.")
-            else:
-                logger.info("[STARTUP] Database already has jobs. Skipping initial scraping.")
+            # OLD STATIC SEEDING - COMMENTED OUT FOR ZENROWS INTEGRATION
+            # if job_count == 0:
+            #     # Run initial scraping to populate database
+            #     logger.info("[STARTUP] Database is empty. Running initial job scraping...")
+            #     self.scrape_jobs_task()
+            #     logger.info("[STARTUP] Initial scraping complete! Database populated.")
+            # else:
+            #     logger.info("[STARTUP] Database already has jobs. Skipping initial scraping.")
         finally:
             db.close()
         

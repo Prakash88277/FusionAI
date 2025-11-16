@@ -58,6 +58,12 @@ export const uploadResumeAndRecommend = (formData, jobSources = "all", limit = 2
     params: { job_sources: jobSources, limit }
   });
 
+// New Resume Parser API
+export const uploadResumeNew = (formData) =>
+  API.post('/resume/upload-resume', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+
 // Enhanced V2 API - uses database matching
 export const uploadResumeAndMatch = (formData, limit = 50, minMatchScore = 30) =>
   API.post('/v2/resume/upload-and-match', formData, {

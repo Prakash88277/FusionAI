@@ -3,7 +3,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { AiOutlineUpload, AiOutlineCheckCircle } from "react-icons/ai";
-import { uploadResumeAndMatch } from "../services/api";
+import { uploadResumeNew } from "../services/api";
+import { searchJobsBySkills } from "../services/zenrowsService";
 
 const ResumeUpload = ({ onUpload }) => {
   const [fileName, setFileName] = useState("");
@@ -20,23 +21,38 @@ const ResumeUpload = ({ onUpload }) => {
     setUploading(true);
 
     try {
+      console.log('📄 Uploading resume to new parser...');
       const formData = new FormData();
       formData.append("file", file);
       
-      // Upload and match with database jobs (fetching 50 matches, min 30% score)
-      const response = await uploadResumeAndMatch(formData, 50, 30);
+      // Use new resume parser
+      const response = await uploadResumeNew(formData);
       
-      // Store resume data
-      if (response.data.resume_data) {
-        localStorage.setItem("resumeId", response.data.resume_data.id || "");
-        if (response.data.resume_data.country) {
-          localStorage.setItem("resumeCountry", response.data.resume_data.country);
+      console.log('✅ Resume parsed successfully:', response.data);
+      
+      // Store parsed data
+      if (response.data.parsed_data) {
+        const parsedData = response.data.parsed_data;
+        
+        // Store user skills for job matching
+        if (parsedData.skills && parsedData.skills.length > 0) {
+          localStorage.setItem("userSkills", JSON.stringify(parsedData.skills));
+          console.log('💾 Stored user skills:', parsedData.skills);
         }
-      }
-      
-      // Store job matches
-      if (response.data.job_matches) {
-        localStorage.setItem("jobRecommendations", JSON.stringify(response.data.job_matches));
+        
+        // Store other resume data
+        localStorage.setItem("resumeData", JSON.stringify({
+          name: parsedData.name,
+          email: parsedData.email,
+          experience: parsedData.experience,
+          domain: parsedData.domain,
+          roles: parsedData.roles
+        }));
+        
+        // Store keywords for additional matching
+        if (parsedData.keywords) {
+          localStorage.setItem("resumeKeywords", JSON.stringify(parsedData.keywords));
+        }
       }
       
       // Mark upload as successful
@@ -45,6 +61,7 @@ const ResumeUpload = ({ onUpload }) => {
       // Call parent callback if provided
       if (onUpload) onUpload(file);
       
+      console.log('🔄 Redirecting to dashboard...');
       // Redirect to dashboard
       navigate("/dashboard");
       

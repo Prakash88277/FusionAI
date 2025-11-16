@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test ZenRows Integration</title>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>Testing ZenRows Integration</h1>
+    <div id="status">Loading...</div>
+    <div id="jobs"></div>
+
+    <script>
+        const ZENROWS_API_KEY = 'ac77427ddaea21133538d4e5a7464d975c3c835e';
+        const ZENROWS_BASE_URL = 'https://api.zenrows.com/v1/';
+
+        async function testZenRowsJobs() {
+            const statusDiv = document.getElementById('status');
+            const jobsDiv = document.getElementById('jobs');
+            
+            statusDiv.innerHTML = '🔄 Loading jobs from ZenRows...';
+            
+            try {
+                // Test job scraping
+                const searchUrl = 'https://www.indeed.com/jobs?q=software+developer&l=India';
+                
+                const response = await axios.get(ZENROWS_BASE_URL, {
+                    params: {
+                        apikey: ZENROWS_API_KEY,
+                        url: searchUrl,
+                        js_render: 'true',
+                        premium_proxy: 'true'
+                    }
+                });
+                
+                statusDiv.innerHTML = '✅ ZenRows API working! Response size: ' + response.data.length + ' characters';
+                
+                // Parse basic job info
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(response.data, 'text/html');
+                
+                // Look for job cards
+                const jobCards = doc.querySelectorAll('[data-jk], .jobsearch-SerpJobCard, .job_seen_beacon');
+                
+                let jobsHtml = '<h2>📋 Jobs Found: ' + jobCards.length + '</h2>';
+                
+                if (jobCards.length > 0) {
+                    jobsHtml += '<div style="display: grid; gap: 10px;">';
+                    
+                    Array.from(jobCards).slice(0, 5).forEach((card, index) => {
+                        const titleEl = card.querySelector('h2 a, .jobTitle a, [data-testid="job-title"]');
+                        const companyEl = card.querySelector('.companyName, [data-testid="company-name"]');
+                        const locationEl = card.querySelector('.companyLocation, [data-testid="job-location"]');
+                        
+                        const title = titleEl ? titleEl.textContent.trim() : 'Software Developer';
+                        const company = companyEl ? companyEl.textContent.trim() : 'Tech Company';
+                        const location = locationEl ? locationEl.textContent.trim() : 'India';
+                        
+                        jobsHtml += `
+                            <div style="border: 1px solid #ccc; padding: 10px; border-radius: 8px; background: #f9f9f9;">
+                                <h3 style="margin: 0; color: #2563eb;">${title}</h3>
+                                <p style="margin: 5px 0; font-weight: bold;">${company}</p>
+                                <p style="margin: 5px 0; color: #666;">${location}</p>
+                                <p style="margin: 5px 0; font-size: 12px; color: #888;">Source: Indeed (Live via ZenRows)</p>
+                            </div>
+                        `;
+                    });
+                    
+                    jobsHtml += '</div>';
+                } else {
+                    jobsHtml += '<p>No job cards found in response, but API is working!</p>';
+                }
+                
+                jobsDiv.innerHTML = jobsHtml;
+                
+            } catch (error) {
+                statusDiv.innerHTML = '❌ Error: ' + error.message;
+                console.error('Error:', error);
+            }
+        }
+        
+        // Run test when page loads
+        testZenRowsJobs();
+    </script>
+</body>
+</html>
