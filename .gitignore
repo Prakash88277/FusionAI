@@ -71,3 +71,4 @@ logs/
 *.rar
 *.tar
 *.zip
+.vercel

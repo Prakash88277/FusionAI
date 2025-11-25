@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 
 const JobCard = ({ job, index }) => {
-  const [showDescription, setShowDescription] = useState(false);
 
   const getMatchColor = (score) => {
     if (score >= 80) return 'text-green-600 bg-green-50';

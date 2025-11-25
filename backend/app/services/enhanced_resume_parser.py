@@ -12,6 +12,8 @@ import uuid
 from datetime import datetime
 from app.models.resume import ResumeData, Education, Experience, Project
 
+logger = logging.getLogger(__name__)
+
 # Try to import pdfminer, fallback to PyPDF2 only if not available
 try:
     from pdfminer.high_level import extract_text
@@ -19,8 +21,6 @@ try:
 except ImportError:
     PDFMINER_AVAILABLE = False
     logger.warning("pdfminer not available, using PyPDF2 only")
-
-logger = logging.getLogger(__name__)
 
 
 class EnhancedResumeParser:

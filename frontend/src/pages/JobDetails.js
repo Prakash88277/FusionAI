@@ -238,64 +238,62 @@ const JobDetails = () => {
   );
 };
 
-// Helper function to generate mock job details
-const generateMockJobDetails = (id) => {
-  const companies = ['Google', 'Microsoft', 'Amazon', 'LinkedIn', 'Facebook'];
-  const locations = ['Bangalore', 'Hyderabad', 'Mumbai', 'Delhi', 'Remote'];
-  const titles = ['Software Engineer', 'Data Scientist', 'Frontend Developer', 'Backend Developer', 'Full Stack Developer'];
-  
-  const allSkills = [
-    'Python', 'Django', 'Flask', 'SQL', 'AWS',
-    'JavaScript', 'React', 'Node.js', 'MongoDB', 'Express',
-    'Java', 'Spring Boot', 'Hibernate', 'MySQL', 'Docker',
-    'C++', 'Data Structures', 'Algorithms', 'System Design',
-    'HTML', 'CSS', 'TypeScript', 'Angular', 'Vue.js'
-  ];
-  
-  // Generate a random set of skills for the job
-  const shuffled = [...allSkills].sort(() => 0.5 - Math.random());
-  const jobSkills = shuffled.slice(0, 8);
-  
-  // Generate matching and missing skills
-  const matchingSkills = jobSkills.slice(0, 5);
-  const missingSkills = jobSkills.slice(5);
-  
-  const matchScore = Math.floor(Math.random() * 41) + 60; // 60-100%
-  const minSalary = Math.floor(Math.random() * 10) + 5; // 5-15 LPA
-  const maxSalary = minSalary + Math.floor(Math.random() * 10) + 2; // min + (2-12) LPA
-  
-  const requirements = [
-    `${Math.floor(Math.random() * 5) + 1}-${Math.floor(Math.random() * 5) + 5} years of experience in ${jobSkills[0]} and ${jobSkills[1]}`,
-    `Strong knowledge of ${jobSkills.slice(0, 3).join(', ')}`,
-    `Experience with ${jobSkills.slice(3, 5).join(' and ')}`,
-    'Bachelor\'s degree in Computer Science or related field',
-    'Excellent problem-solving and communication skills'
-  ];
-  
-  const responsibilities = [
-    `Develop and maintain applications using ${jobSkills.slice(0, 3).join(', ')}`,
-    `Collaborate with cross-functional teams to define, design, and ship new features`,
-    `Optimize application for maximum speed and scalability`,
-    `Participate in code reviews and mentor junior developers`,
-    `Stay up-to-date with latest industry trends and technologies`
-  ];
-  
-  return {
-    id,
-    title: titles[id % titles.length],
-    company: companies[id % companies.length],
-    location: locations[id % locations.length],
-    salary: `₹${minSalary} - ${maxSalary} LPA`,
-    postedDate: `${Math.floor(Math.random() * 30) + 1} days ago`,
-    skills: jobSkills,
-    matchScore,
-    applyLink: 'https://example.com/apply',
-    description: `We are looking for a talented ${titles[id % titles.length]} to join our team. This role requires expertise in ${jobSkills.join(', ')}. You will be working on cutting-edge projects and collaborating with a team of experienced professionals.`,
-    requirements,
-    responsibilities,
-    matchingSkills,
-    missingSkills
-  };
-};
+// Helper function to generate mock job details (kept for reference - not used)
+// const generateMockJobDetails = (id) => {
+//   const companies = ['Google', 'Microsoft', 'Amazon', 'LinkedIn', 'Facebook'];
+//   const locations = ['Bangalore', 'Hyderabad', 'Mumbai', 'Delhi', 'Remote'];
+//   const titles = ['Software Engineer', 'Data Scientist', 'Frontend Developer', 'Backend Developer', 'Full Stack Developer'];
+//   
+//   const allSkills = [
+//     'Python', 'Django', 'Flask', 'SQL', 'AWS',
+//     'JavaScript', 'React', 'Node.js', 'MongoDB', 'Express',
+//     'Java', 'Spring Boot', 'Hibernate', 'MySQL', 'Docker',
+//     'C++', 'Data Structures', 'Algorithms', 'System Design',
+//     'HTML', 'CSS', 'TypeScript', 'Angular', 'Vue.js'
+//   ];
+//   
+//   const shuffled = [...allSkills].sort(() => 0.5 - Math.random());
+//   const jobSkills = shuffled.slice(0, 8);
+//   
+//   const matchingSkills = jobSkills.slice(0, 5);
+//   const missingSkills = jobSkills.slice(5);
+//   
+//   const matchScore = Math.floor(Math.random() * 41) + 60;
+//   const minSalary = Math.floor(Math.random() * 10) + 5;
+//   const maxSalary = minSalary + Math.floor(Math.random() * 10) + 2;
+//   
+//   const requirements = [
+//     `${Math.floor(Math.random() * 5) + 1}-${Math.floor(Math.random() * 5) + 5} years of experience in ${jobSkills[0]} and ${jobSkills[1]}`,
+//     `Strong knowledge of ${jobSkills.slice(0, 3).join(', ')}`,
+//     `Experience with ${jobSkills.slice(3, 5).join(' and ')}`,
+//     'Bachelor\'s degree in Computer Science or related field',
+//     'Excellent problem-solving and communication skills'
+//   ];
+//   
+//   const responsibilities = [
+//     `Develop and maintain applications using ${jobSkills.slice(0, 3).join(', ')}`,
+//     `Collaborate with cross-functional teams to define, design, and ship new features`,
+//     `Optimize application for maximum speed and scalability`,
+//     `Participate in code reviews and mentor junior developers`,
+//     `Stay up-to-date with latest industry trends and technologies`
+//   ];
+//   
+//   return {
+//     id,
+//     title: titles[id % titles.length],
+//     company: companies[id % companies.length],
+//     location: locations[id % locations.length],
+//     salary: `₹${minSalary} - ${maxSalary} LPA`,
+//     postedDate: `${Math.floor(Math.random() * 30) + 1} days ago`,
+//     skills: jobSkills,
+//     matchScore,
+//     applyLink: 'https://example.com/apply',
+//     description: `We are looking for a talented ${titles[id % titles.length]} to join our team. This role requires expertise in ${jobSkills.join(', ')}. You will be working on cutting-edge projects and collaborating with a team of experienced professionals.`,
+//     requirements,
+//     responsibilities,
+//     matchingSkills,
+//     missingSkills
+//   };
+// };
 
 export default JobDetails;

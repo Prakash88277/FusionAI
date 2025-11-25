@@ -2,8 +2,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { AiOutlineUpload, AiOutlineCheckCircle } from "react-icons/ai";
-import { uploadResumeNew } from "../services/api";
+import { AiOutlineUpload } from "react-icons/ai";
+import { uploadResumeAndMatch } from "../services/api";
 // Mock service no longer needed - using real API
 
 const ResumeUpload = ({ onUpload }) => {
@@ -15,7 +15,7 @@ const ResumeUpload = ({ onUpload }) => {
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     setFileName(file.name);
     setError("");
     setUploading(true);
@@ -24,51 +24,45 @@ const ResumeUpload = ({ onUpload }) => {
       console.log('📄 Uploading resume to new parser...');
       const formData = new FormData();
       formData.append("file", file);
-      
-      // Use new resume parser
-      const response = await uploadResumeNew(formData);
-      
-      console.log('✅ Resume parsed successfully:', response.data);
-      
-      // Store parsed data
-      if (response.data.parsed_data) {
-        const parsedData = response.data.parsed_data;
-        
-        // Store user skills for job matching
-        if (parsedData.skills && parsedData.skills.length > 0) {
-          localStorage.setItem("userSkills", JSON.stringify(parsedData.skills));
-          console.log('💾 Stored user skills:', parsedData.skills);
+
+      // Use enhanced resume matcher API
+      const response = await uploadResumeAndMatch(formData);
+
+      console.log('✅ Resume parsed and matched successfully:', response.data);
+
+      // Store parsed data and matches
+      if (response.data.success) {
+        const resumeData = response.data.resume_data;
+        const jobMatches = response.data.job_matches;
+
+        // Store complete response data
+        localStorage.setItem("resumeData", JSON.stringify(resumeData));
+        localStorage.setItem("jobMatches", JSON.stringify(jobMatches));
+
+        // Store user skills for backward compatibility/fallback
+        if (resumeData.skills && resumeData.skills.length > 0) {
+          localStorage.setItem("userSkills", JSON.stringify(resumeData.skills));
+          console.log('💾 Stored user skills:', resumeData.skills);
         }
-        
-        // Store other resume data
-        localStorage.setItem("resumeData", JSON.stringify({
-          name: parsedData.name,
-          email: parsedData.email,
-          experience: parsedData.experience,
-          domain: parsedData.domain,
-          roles: parsedData.roles
-        }));
-        
-        // Store keywords for additional matching
-        if (parsedData.keywords) {
-          localStorage.setItem("resumeKeywords", JSON.stringify(parsedData.keywords));
-        }
+
+        // Set flag to indicate new data is available
+        localStorage.setItem("newResumeUploaded", "true");
       }
-      
+
       // Mark upload as successful
       localStorage.setItem("resumeUploaded", "true");
-      
+
       // Call parent callback if provided
       if (onUpload) onUpload(file);
-      
+
       console.log('🔄 Redirecting to dashboard...');
       // Redirect to dashboard
       navigate("/dashboard");
-      
+
     } catch (err) {
       console.error("Upload error:", err);
       setUploading(false);
-      
+
       let errorMessage = "Failed to upload resume. ";
       if (err.code === "ERR_NETWORK") {
         errorMessage += "Please make sure the backend server is running.";
@@ -120,11 +114,10 @@ const ResumeUpload = ({ onUpload }) => {
             onClick={() => !uploading && document.getElementById('resume-file-input').click()}
             whileHover={!uploading ? { scale: 1.05 } : {}}
             whileTap={!uploading ? { scale: 0.95 } : {}}
-            className={`px-8 py-3 rounded-xl font-semibold text-white shadow-lg transition-all duration-300 ${
-              uploading
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 cursor-pointer"
-            }`}
+            className={`px-8 py-3 rounded-xl font-semibold text-white shadow-lg transition-all duration-300 ${uploading
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 cursor-pointer"
+              }`}
             disabled={uploading}
             type="button"
           >

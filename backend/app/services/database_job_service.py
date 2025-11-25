@@ -1,24 +1,35 @@
 """
-Database job service to fetch jobs from SQLite database
+Database job service to fetch jobs from SQLite database or Vercel static data
 """
 
 import logging
+import os
 from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
-from app.database.database import SessionLocal
-from app.database.models import Job as DBJob
-from app.models.job import Job, JobType, ExperienceLevel
 from datetime import datetime, timedelta
 import json
 
 logger = logging.getLogger(__name__)
 
+# Check if we're running on Vercel
+IS_VERCEL = os.environ.get('VERCEL') == '1'
+
+if IS_VERCEL:
+    from app.database.vercel_database import vercel_database_service
+else:
+    from sqlalchemy.orm import Session
+    from sqlalchemy import and_, or_, func
+    from app.database.database import SessionLocal
+    from app.database.models import Job as DBJob
+    from app.models.job import Job, JobType, ExperienceLevel
+
 class DatabaseJobService:
-    """Service to fetch jobs from the database"""
+    """Service to fetch jobs from the database or static data"""
     
     def __init__(self):
-        self.db = SessionLocal()
+        if not IS_VERCEL:
+            self.db = SessionLocal()
+        else:
+            self.db = None
     
     def get_jobs(self, 
                  keywords: Optional[str] = None,
@@ -29,12 +40,27 @@ class DatabaseJobService:
                  experience_level: Optional[str] = None,
                  salary_min: Optional[int] = None,
                  salary_max: Optional[int] = None,
-                 limit: int = 100) -> List[Job]:
+                 limit: int = 30) -> List:
         """
-        Get jobs from database with filtering
+        Get jobs from database or static data with filtering
         """
         try:
-            # Only get jobs from database - no external sources
+            # Use Vercel static data if deployed, otherwise use database
+            if IS_VERCEL:
+                return vercel_database_service.get_jobs(
+                    keywords=keywords,
+                    location=location,
+                    company=company,
+                    country=country,
+                    job_type=job_type,
+                    experience_level=experience_level,
+                    salary_min=salary_min,
+                    salary_max=salary_max,
+                    limit=limit
+                )
+            
+            # Local database logic
+            from app.models.job import Job, JobType, ExperienceLevel
             query = self.db.query(DBJob).filter(DBJob.is_active == True)
             
             # Apply filters
@@ -126,8 +152,10 @@ class DatabaseJobService:
             return []
     
     def get_job_count(self) -> int:
-        """Get total number of active jobs in database"""
+        """Get total number of active jobs"""
         try:
+            if IS_VERCEL:
+                return vercel_database_service.get_job_count()
             return self.db.query(DBJob).filter(DBJob.is_active == True).count()
         except Exception as e:
             logger.error(f"Error getting job count: {e}")
@@ -136,6 +164,9 @@ class DatabaseJobService:
     def get_stats(self) -> Dict[str, Any]:
         """Get database statistics"""
         try:
+            if IS_VERCEL:
+                return vercel_database_service.get_stats()
+            
             total_jobs = self.db.query(DBJob).count()
             active_jobs = self.db.query(DBJob).filter(DBJob.is_active == True).count()
             
@@ -154,7 +185,7 @@ class DatabaseJobService:
     
     def close(self):
         """Close database connection"""
-        if self.db:
+        if not IS_VERCEL and self.db:
             self.db.close()
 
 # Global database job service instance

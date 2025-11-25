@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "fusionai-job-search",
   "builds": [
     {
       "src": "frontend/package.json",
@@ -8,12 +7,25 @@
       "config": {
         "distDir": "build"
       }
+    },
+    {
+      "src": "backend/api/index.py",
+      "use": "@vercel/python",
+      "config": {
+        "pythonVersion": "3.12",
+        "maxLambdaSize": "50mb"
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "dest": "/backend/api/index.py",
+      "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+    },
+    {
+      "src": "/health",
+      "dest": "/backend/api/index.py"
     },
     {
       "src": "/(.*)",
@@ -24,8 +36,5 @@
   "outputDirectory": "frontend/build",
   "installCommand": "cd frontend && npm install",
   "framework": "create-react-app",
-  "regions": ["bom1"],
-  "env": {
-    "REACT_APP_API_BASE": "https://fusionai-job-search.vercel.app/api"
-  }
+  "regions": ["bom1"]
 }

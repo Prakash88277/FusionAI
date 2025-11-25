@@ -38,7 +38,7 @@ const ScraperControl = () => {
 
     try {
       const keywords = ["software", "developer", "engineer", "python", "java", "data"];
-      const response = await triggerScraping(keywords, "India", 50);
+      await triggerScraping(keywords, "India", 50);
       
       setMessage("✅ Scraping started! Jobs will be added to database in 30-60 seconds. Check back soon!");
       
