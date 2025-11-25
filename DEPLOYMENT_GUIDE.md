@@ -1,62 +1,26 @@
-# 🚀 One-Click Deployment Guide
+# 🚀 Vercel Deployment Guide
 
-## Quick Deploy to Vercel (Recommended)
+Complete guide to deploy your AI Job Matcher application to Vercel in one step.
 
-### Option 1: Direct Vercel Deploy
-1. **Push to GitHub:**
-   ```bash
-   git add .
-   git commit -m "Ready for deployment"
-   git push origin main
-   ```
+## 📋 Prerequisites
 
-2. **Deploy to Vercel:**
-   - Go to [vercel.com](https://vercel.com)
-   - Click "New Project"
-   - Import your GitHub repository
-   - Vercel will auto-detect React and deploy!
+1. **GitHub Account** (to store your code)
+2. **Vercel Account** (free at vercel.com)
+3. **Git** installed on your computer
 
-### Option 2: Vercel CLI (One Command)
-```bash
-# Install Vercel CLI
-npm i -g vercel
+## 🎯 One-Step Deployment Process
 
-# Deploy (from project root)
-cd frontend && vercel --prod
-```
+### Step 1: Prepare Your Code
 
-## Alternative: Netlify Deploy
+Your code is already configured for Vercel deployment with:
+- ✅ `vercel.json` configuration file
+- ✅ Frontend build settings
+- ✅ Backend API serverless functions
+- ✅ Environment variables setup
+- ✅ 30 Google jobs as static data (Vercel-compatible)
 
-### Option 1: Drag & Drop
-1. Build the project:
-   ```bash
-   cd frontend
-   npm run build
-   ```
-2. Drag the `build` folder to [netlify.com/drop](https://netlify.com/drop)
+### Step 2: Push to GitHub
 
-### Option 2: GitHub Integration
-1. Push to GitHub
-2. Go to [netlify.com](https://netlify.com)
-3. "New site from Git" → Select your repo
-4. Build settings are auto-configured via `netlify.toml`
-
-## 📁 Deployment Files Created
-
-- `vercel.json` - Vercel configuration
-- `netlify.toml` - Netlify configuration  
-- `.github/workflows/deploy.yml` - Auto-deploy on push
-- This guide file
-
-## 🔧 Environment Variables
-
-For production, set these in your hosting platform:
-
-```
-REACT_APP_API_BASE=https://your-domain.com/api
-```
-
-## ✅ Pre-Deployment Checklist
 
 - [x] Mock job service implemented
 - [x] Frontend builds successfully (`npm run build`)
