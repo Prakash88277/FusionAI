@@ -21,6 +21,10 @@ const ResumeUpload = ({ onUpload }) => {
     setUploading(true);
 
     try {
+      // Clear previous data to ensure fresh state
+      localStorage.removeItem("jobMatches");
+      localStorage.removeItem("newResumeUploaded");
+
       console.log('📄 Uploading resume to new parser...');
       const formData = new FormData();
       formData.append("file", file);
@@ -28,35 +32,61 @@ const ResumeUpload = ({ onUpload }) => {
       // Use enhanced resume matcher API
       const response = await uploadResumeAndMatch(formData);
 
-      console.log('✅ Resume parsed and matched successfully:', response.data);
+      console.log('✅ Resume parsed and matched successfully');
 
-      // Store parsed data and matches
-      if (response.data.success) {
-        const resumeData = response.data.resume_data;
-        const jobMatches = response.data.job_matches;
+      console.log('✅ Resume parsed and matched successfully');
+      console.log('🔍 Raw Server Response:', JSON.stringify(response.data, null, 2));
 
-        // Store complete response data
-        localStorage.setItem("resumeData", JSON.stringify(resumeData));
-        localStorage.setItem("jobMatches", JSON.stringify(jobMatches));
+      // Robust extraction of matches from potential structures
+      let matches = [];
+      const data = response.data;
 
-        // Store user skills for backward compatibility/fallback
-        if (resumeData.skills && resumeData.skills.length > 0) {
-          localStorage.setItem("userSkills", JSON.stringify(resumeData.skills));
-          console.log('💾 Stored user skills:', resumeData.skills);
+      if (Array.isArray(data)) {
+        matches = data;
+      } else if (typeof data === 'object' && data !== null) {
+        // Check common wrapper keys
+        if (Array.isArray(data.job_matches)) matches = data.job_matches;
+        else if (Array.isArray(data.jobs)) matches = data.jobs;
+        else if (Array.isArray(data.matches)) matches = data.matches;
+        else if (Array.isArray(data.data)) matches = data.data;
+        // Check if it's a single job object (has title/company)
+        else if (data.title && data.company) {
+          console.log('💡 Response appears to be a single job object, wrapping in array');
+          matches = [data];
         }
+        // Last resort: Check if object values form the list (e.g. {"0": job1, "1": job2} or map)
+        else {
+          const allValues = Object.values(data);
+          // 1. Look for nested array
+          const arrayValue = allValues.find(val => Array.isArray(val) && val.length > 0);
 
-        // Set flag to indicate new data is available
-        localStorage.setItem("newResumeUploaded", "true");
+          if (arrayValue) {
+            console.log('💡 Found an array in response object values, using it');
+            matches = arrayValue;
+          }
+          // 2. Check if the values themselves are the jobs (map structure)
+          else if (allValues.length > 0 && allValues.every(val =>
+            val && typeof val === 'object' && (val.title || val.company || val.match_score)
+          )) {
+            console.log('💡 Response appears to be a map of job objects, converting to array');
+            matches = allValues;
+          }
+        }
       }
 
-      // Mark upload as successful
+      if (matches.length === 0) {
+        console.warn('⚠️ Could not extract job array from response. Response structure:', data);
+      }
+
+      console.log('📦 Storing', matches.length, 'matches');
+      localStorage.setItem("jobMatches", JSON.stringify(matches));
+      localStorage.setItem("newResumeUploaded", "true");
       localStorage.setItem("resumeUploaded", "true");
 
-      // Call parent callback if provided
+      // Mark upload as successful
       if (onUpload) onUpload(file);
 
       console.log('🔄 Redirecting to dashboard...');
-      // Redirect to dashboard
       navigate("/dashboard");
 
     } catch (err) {
@@ -124,7 +154,7 @@ const ResumeUpload = ({ onUpload }) => {
             {uploading ? (
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Uploading...</span>
+                <span>Analyzing Resume & Matching Jobs... (this may take a minute)</span>
               </div>
             ) : (
               <div className="flex items-center gap-2">

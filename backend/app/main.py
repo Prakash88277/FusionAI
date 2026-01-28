@@ -3,10 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 
-from app.api.routes import resume, jobs, auth, enhanced_resume, scraper_control
+from app.api.routes import auth, enhanced_resume
 from app.database.database import init_db
-from app.scrapers.scheduler import job_scheduler
 
+# logging config...
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -21,20 +21,15 @@ async def lifespan(app: FastAPI):
     init_db()
     logger.info("[OK] Database initialized")
     
-    # Start job scraping scheduler
-    job_scheduler.start()
-    logger.info("[OK] Job scheduler started")
-    
     yield
     
     # Shutdown
     logger.info("[SHUTDOWN] Shutting down application...")
-    job_scheduler.stop()
 
 
 app = FastAPI(
     title="AI-Powered Resume-Based Job Search API",
-    description="API for resume parsing and job matching with daily automated scraping",
+    description="API for resume parsing and job matching (n8n integration)",
     version="2.0.0",
     lifespan=lifespan
 )
@@ -49,10 +44,7 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(resume.router, prefix="/api/resume", tags=["Resume"])
 app.include_router(enhanced_resume.router, prefix="/api/v2/resume", tags=["Enhanced Resume"])
-app.include_router(jobs.router, prefix="/api/jobs", tags=["Jobs"])
-app.include_router(scraper_control.router, prefix="/api/scraper", tags=["Scraper Control"])
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 
 @app.get("/")
@@ -71,4 +63,4 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "scheduler": "running" if job_scheduler.is_running else "stopped"}
+    return {"status": "healthy"}

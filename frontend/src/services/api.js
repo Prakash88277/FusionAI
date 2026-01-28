@@ -4,7 +4,7 @@ import axios from 'axios';
 const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000/api";
 const API = axios.create({
   baseURL: API_BASE,
-  timeout: 30000, // 30 second timeout
+  timeout: 120000, // 120 second timeout
   headers: {
     'Content-Type': 'application/json',
   },
@@ -31,7 +31,7 @@ API.interceptors.response.use(
   },
   (error) => {
     console.error('API Error:', error);
-    
+
     if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
       error.message = 'Server not reachable. Please start backend before uploading.';
     } else if (error.response) {
@@ -41,7 +41,7 @@ API.interceptors.response.use(
       // Request was made but no response received
       error.message = 'No response from server. Please check if backend is running.';
     }
-    
+
     return Promise.reject(error);
   }
 );

@@ -9,7 +9,8 @@ import logging
 from app.database.database import get_db
 from app.database.models import Resume, Job
 from app.services.enhanced_resume_parser import enhanced_resume_parser
-from app.services.job_matcher import job_matcher
+# from app.services.job_matcher import job_matcher
+import httpx
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -18,20 +19,18 @@ logger = logging.getLogger(__name__)
 @router.post("/upload-and-match")
 async def upload_resume_and_match(
     file: UploadFile = File(...),
-    limit: int = 50,
-    min_match_score: float = 30.0,
+    limit: int = 20,
     db: Session = Depends(get_db)
 ):
     """
-    Upload resume, parse it, and match with jobs from database
+    Upload resume, parse it, and match with jobs via n8n webhook
     
     Args:
         file: Resume file (PDF or DOCX)
-        limit: Maximum number of matches to return
-        min_match_score: Minimum match score (0-100)
+        limit: Maximum number of matches to return (default: 20)
         
     Returns:
-        Parsed resume data and matched jobs
+        Matched jobs directly from n8n
     """
     try:
         logger.info(f"📄 Processing resume upload: {file.filename}")
@@ -42,70 +41,50 @@ async def upload_resume_and_match(
         
         # Parse resume
         resume_data = await enhanced_resume_parser.parse_resume(file)
-        logger.info(f"✅ Resume parsed: {len(resume_data.skills)} skills, {resume_data.name}")
+        logger.info(f"✅ Resume parsed: {len(resume_data.skills)} skills")
         
-        # Save resume to database
-        resume_db = Resume(
-            resume_id=resume_data.id,
-            filename=file.filename,
-            name=resume_data.name,
-            email=resume_data.email,
-            phone="",  # Phone not extracted yet
-            skills=resume_data.skills,
-            experience_years=2.0,  # Default for now
-            education=[edu.dict() for edu in resume_data.education],
-            certifications=[],  # Not implemented yet
-            raw_text=""  # Not storing raw text for now
-        )
-        db.add(resume_db)
-        db.commit()
-        db.refresh(resume_db)
-        
-        logger.info(f"💾 Resume saved to database with ID: {resume_db.id}")
-        
-        # Convert ResumeData to dict for job matching
-        resume_dict = {
+        # Extract experience string (e.g., "2 years")
+        experience = "0 years"
+        if resume_data.experience and len(resume_data.experience) > 0:
+            experience = resume_data.experience[0].duration
+            
+        # Prepare payload for n8n
+        payload = {
             "skills": resume_data.skills,
-            "experience_years": 2.0,  # Default for now
-            "name": resume_data.name,
-            "email": resume_data.email,
-            "education": [edu.dict() for edu in resume_data.education],
-            "country": resume_data.country
+            "experience": experience,
+            "location": resume_data.country,
+            "limit": limit
         }
         
-        # Match with jobs
-        job_matches = job_matcher.match_resume_with_jobs(
-            resume_data=resume_dict,
-            db=db,
-            limit=limit,
-            min_match_score=min_match_score
-        )
+        logger.info(f"🚀 Sending to n8n: {payload}")
         
-        logger.info(f"🎯 Found {len(job_matches)} matching jobs")
+        # Call n8n webhook
+        webhook_url = "https://tempmail88277.app.n8n.cloud/webhook-test/3d0f11da-ba1a-4f8d-a228-cf6c80c7bc4f"
         
-        # Save matches to database
-        job_matcher.save_matches_to_db(
-            resume_id=resume_db.id,
-            job_matches=job_matches,
-            db=db
-        )
+        async with httpx.AsyncClient() as client:
+            response = await client.post(webhook_url, json=payload, timeout=120.0)
+            
+            if response.status_code != 200:
+                logger.error(f"❌ n8n Error: {response.text}")
+                raise HTTPException(status_code=502, detail="Failed to get matches from matching service")
+                
+            n8n_data = response.json()
+            
+            # Debug n8n response
+            logger.info(f"🔍 n8n Response Type: {type(n8n_data)}")
+            if isinstance(n8n_data, list):
+                logger.info(f"✅ Received {len(n8n_data)} items from n8n")
+            elif isinstance(n8n_data, dict):
+                logger.warning("⚠️ Received SINGLE DICT from n8n (expected List)")
+                logger.info(f"Keys: {list(n8n_data.keys())}")
+            else:
+                logger.warning(f"⚠️ Received unexpected type: {type(n8n_data)}")
+
+            logger.info("✅ Received matches from n8n")
+            return n8n_data
         
-        return {
-            "success": True,
-            "resume_data": {
-                "id": resume_db.id,
-                "resume_id": resume_data.id,
-                "name": resume_data.name,
-                "email": resume_data.email,
-                "skills": resume_data.skills,
-                "experience_years": 2.0,
-                "education": [edu.dict() for edu in resume_data.education],
-                "country": resume_data.country
-            },
-            "job_matches": job_matches,
-            "total_matches": len(job_matches)
-        }
-        
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"❌ Error processing resume: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing resume: {str(e)}")

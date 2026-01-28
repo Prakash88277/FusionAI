@@ -31,101 +31,48 @@ const Dashboard = () => {
         console.log('✨ Found fresh matches from recent upload!');
         try {
           const matches = JSON.parse(storedMatches);
-          console.log(`📦 Loaded ${matches.length} matches from local storage`);
+
+
+
 
           // Transform matches to flat job objects for display
           const formattedJobs = matches.map(match => {
-            // If it's already a flat object (fallback) or nested structure
+            // Handle both { job: {...} } and direct job object formats
             const jobData = match.job || match;
 
             return {
               ...jobData,
+              // Map _id from n8n to id for React keys
+              id: jobData._id || jobData.id,
               // Add match details at top level for the card component
+              // Use safe defaults
               match_score: match.match_score || jobData.match_score || 0,
               matching_skills: match.matching_skills || jobData.matching_skills || [],
-              missing_skills: match.missing_skills || jobData.missing_skills || []
+              missing_skills: match.missing_skills || jobData.missing_skills || [],
+              // Ensure apply_link is accessible
+              apply_link: jobData.apply_link || jobData.applyLink || jobData.apply_url || '#'
             };
           });
 
           setJobs(formattedJobs);
           setLoading(false);
-
-          // Optional: Clear the flag so next reload might fetch fresh if needed
-          // localStorage.removeItem("newResumeUploaded");
           return;
+
         } catch (e) {
           console.error("Error parsing stored matches:", e);
-          // Fall through to normal loading
+          // Fall through to other loading methods if parsing fails
         }
       }
 
-      console.log('🔄 Fetching jobs from database...');
+      console.log('🔄 No recent upload, fetching available jobs...');
 
-      // Check if user has uploaded a resume with skills
-      const storedSkills = localStorage.getItem("userSkills");
-      let jobsResponse;
+      // If no recent resume upload, fetch latest jobs from DB to show *something* 
+      // instead of empty screen, but clearly generic.
+      const jobsResponse = await getJobs({ limit: 50 });
+      const allJobs = jobsResponse.data || jobsResponse || [];
 
-      let jobs = [];
-
-      if (storedSkills) {
-        const skills = JSON.parse(storedSkills);
-        console.log('👤 User skills found:', skills);
-
-        // Try to get jobs with skill matching first
-        try {
-          jobsResponse = await getJobs({ skills: skills.join(','), limit: 30 });
-          jobs = jobsResponse.data || jobsResponse || [];
-          console.log(`🎯 Found ${jobs.length} jobs matching skills`);
-        } catch (error) {
-          console.log('⚠️ Skill-based search failed, trying fallback');
-        }
-
-        // If no jobs found with skills, get all jobs and filter client-side
-        if (jobs.length === 0) {
-          console.log('🔄 No skill matches found, loading all jobs for client-side filtering...');
-          jobsResponse = await getJobs({ limit: 30 });
-          const allJobs = jobsResponse.data || jobsResponse || [];
-
-          // Simple client-side filtering by skills
-          jobs = allJobs.filter(job => {
-            const jobSkills = Array.isArray(job.skills) ? job.skills.join(' ').toLowerCase() : (job.skills || '').toLowerCase();
-            const jobTitle = (job.title || '').toLowerCase();
-            const jobDescription = (job.description || '').toLowerCase();
-
-            return skills.some(skill =>
-              jobSkills.includes(skill.toLowerCase()) ||
-              jobTitle.includes(skill.toLowerCase()) ||
-              jobDescription.includes(skill.toLowerCase())
-            );
-          });
-
-          console.log(`🎯 Client-side filtering found ${jobs.length} matching jobs`);
-
-          // If still no matches, show random 10 jobs related to general tech keywords
-          if (jobs.length === 0) {
-            setShowingFallback(true);
-            jobs = allJobs.filter(job => {
-              const jobContent = `${job.title} ${job.description} ${job.skills}`.toLowerCase();
-              return jobContent.includes('software') ||
-                jobContent.includes('developer') ||
-                jobContent.includes('engineer') ||
-                jobContent.includes('programming') ||
-                jobContent.includes('technology');
-            }).slice(0, 10);
-          } else {
-            setShowingFallback(false);
-          }
-        } else {
-          setShowingFallback(false);
-        }
-      } else {
-        console.log('🔍 No user skills found, loading all jobs...');
-        jobsResponse = await getJobs({ limit: 30 });
-        jobs = jobsResponse.data || jobsResponse || [];
-      }
-
-      console.log('✅ Final jobs loaded:', jobs.length);
-      setJobs(jobs);
+      console.log(`✅ Loaded ${allJobs.length} jobs from database`);
+      setJobs(allJobs);
       setLoading(false);
 
     } catch (err) {
@@ -230,7 +177,7 @@ const Dashboard = () => {
           ))
           : filteredJobs.map((job, i) => (
             <motion.div
-              key={job.id}
+              key={job.id || i}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
